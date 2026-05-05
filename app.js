@@ -241,6 +241,7 @@ const state = {
     color: "all",
   },
   animationId: null,
+  lastVideoTime: -1,
 };
 
 async function init() {
@@ -684,6 +685,7 @@ async function startCamera() {
     });
     els.video.srcObject = state.stream;
     await els.video.play();
+    await waitForVideoFrame();
     els.captureFrame.disabled = false;
     els.emptyState.style.display = "none";
     els.downloadBtn.disabled = false;
@@ -701,6 +703,7 @@ async function startCamera() {
 function stopCamera() {
   cancelAnimationFrame(state.animationId);
   state.animationId = null;
+  state.lastVideoTime = -1;
   state.stream?.getTracks().forEach((track) => track.stop());
   state.stream = null;
   els.captureFrame.disabled = true;
@@ -713,13 +716,45 @@ async function switchModelMode(runningMode) {
 
 function cameraLoop() {
   if (!state.stream) return;
-  if (state.modelReady) {
-    const result = state.faceLandmarker.detectForVideo(els.video, performance.now());
-    state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
+
+  syncCanvasToVideo();
+
+  if (state.modelReady && els.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+    if (els.video.currentTime !== state.lastVideoTime) {
+      const result = state.faceLandmarker.detectForVideo(els.video, performance.now());
+      state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
+      state.lastVideoTime = els.video.currentTime;
+    }
   }
   redraw();
   setStatus(state.lastLandmarks ? "实时试戴中" : "请正对镜头");
   state.animationId = requestAnimationFrame(cameraLoop);
+}
+
+function waitForVideoFrame() {
+  if (els.video.videoWidth && els.video.videoHeight) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    const handleLoadedMetadata = () => {
+      els.video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      resolve();
+    };
+    els.video.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true });
+  });
+}
+
+function syncCanvasToVideo() {
+  if (state.sourceType !== "video" || !els.video.videoWidth || !els.video.videoHeight) return;
+
+  const maxSide = 1600;
+  const ratio = Math.min(1, maxSide / Math.max(els.video.videoWidth, els.video.videoHeight));
+  const width = Math.round(els.video.videoWidth * ratio);
+  const height = Math.round(els.video.videoHeight * ratio);
+
+  if (els.canvas.width !== width || els.canvas.height !== height) {
+    els.canvas.width = width;
+    els.canvas.height = height;
+  }
 }
 
 async function captureFrame() {
@@ -783,6 +818,7 @@ function drawEmptyCanvas() {
 function getEyeCurves() {
   if (!state.lastLandmarks) {
     if (!state.source) return null;
+    if (state.sourceType === "video") return null;
     return fallbackEyes();
   }
 
