@@ -215,8 +215,10 @@ const els = {
 const ctx = els.canvas.getContext("2d");
 const detectionCanvas = document.createElement("canvas");
 const detectionCtx = detectionCanvas.getContext("2d", { willReadFrequently: true });
-const MOBILE_IMAGE_DETECTION_INTERVAL = 72;
-const MOBILE_IMAGE_DETECTION_MAX_SIDE = 480;
+const MOBILE_IMAGE_DETECTION_INTERVAL = 110;
+const MOBILE_IMAGE_DETECTION_MAX_SIDE = 640;
+const MOBILE_RECOVERY_DETECTION_INTERVAL = 180;
+const MOBILE_RECOVERY_DETECTION_MAX_SIDE = 720;
 
 const state = {
   mode: "upload",
@@ -765,7 +767,8 @@ function detectCameraFrame(now) {
 
 function detectCameraFrameAsImage(now) {
   try {
-    const maxSide = MOBILE_IMAGE_DETECTION_MAX_SIDE;
+    const maxSide =
+      state.missCount > 8 ? MOBILE_RECOVERY_DETECTION_MAX_SIDE : MOBILE_IMAGE_DETECTION_MAX_SIDE;
     const ratio = Math.min(1, maxSide / Math.max(els.video.videoWidth, els.video.videoHeight));
     const width = Math.max(1, Math.round(els.video.videoWidth * ratio));
     const height = Math.max(1, Math.round(els.video.videoHeight * ratio));
@@ -789,14 +792,17 @@ function detectCameraFrameAsImage(now) {
 }
 
 function getCameraDetectionInterval() {
-  return state.cameraDetectionMode === "IMAGE" ? MOBILE_IMAGE_DETECTION_INTERVAL : 80;
+  if (state.cameraDetectionMode !== "IMAGE") return 80;
+  return state.missCount > 8 ? MOBILE_RECOVERY_DETECTION_INTERVAL : MOBILE_IMAGE_DETECTION_INTERVAL;
 }
 
 function updateCameraLandmarks(nextLandmarks) {
   if (!nextLandmarks) {
-    state.lastLandmarks = null;
-    state.smoothedLandmarks = null;
     state.missCount += 1;
+    if (state.missCount > 5) {
+      state.lastLandmarks = null;
+      state.smoothedLandmarks = null;
+    }
     return;
   }
 
