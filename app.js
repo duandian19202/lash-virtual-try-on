@@ -213,6 +213,8 @@ const els = {
 };
 
 const ctx = els.canvas.getContext("2d");
+const detectionCanvas = document.createElement("canvas");
+const detectionCtx = detectionCanvas.getContext("2d", { willReadFrequently: true });
 
 const state = {
   mode: "upload",
@@ -243,6 +245,7 @@ const state = {
   animationId: null,
   lastDetectionAt: 0,
   missCount: 0,
+  cameraDetectionMode: "IMAGE",
 };
 
 async function init() {
@@ -296,7 +299,7 @@ async function refreshDetectionAfterModelReady() {
   }
 
   if (state.sourceType === "video" && state.stream) {
-    await switchModelMode("VIDEO");
+    await switchModelMode(state.cameraDetectionMode);
     redraw();
   }
 }
@@ -693,7 +696,8 @@ async function startCamera() {
     state.source = els.video;
     state.sourceType = "video";
     fitCanvasToSource(els.video.videoWidth, els.video.videoHeight);
-    await switchModelMode("VIDEO");
+    state.cameraDetectionMode = "IMAGE";
+    await switchModelMode(state.cameraDetectionMode);
     cameraLoop();
   } catch (error) {
     setStatus("无法打开摄像头");
@@ -706,6 +710,7 @@ function stopCamera() {
   state.animationId = null;
   state.lastDetectionAt = 0;
   state.missCount = 0;
+  state.cameraDetectionMode = "IMAGE";
   state.stream?.getTracks().forEach((track) => track.stop());
   state.stream = null;
   els.captureFrame.disabled = true;
@@ -725,9 +730,9 @@ function cameraLoop() {
   if (
     state.modelReady &&
     els.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
-    now - state.lastDetectionAt > 110
+    now - state.lastDetectionAt > 160
   ) {
-    detectVideoFrame(now);
+    detectCameraFrame(now);
   }
 
   redraw();
@@ -735,9 +740,39 @@ function cameraLoop() {
   state.animationId = requestAnimationFrame(cameraLoop);
 }
 
-function detectVideoFrame(now) {
+function detectCameraFrame(now) {
+  if (state.cameraDetectionMode === "IMAGE") {
+    detectCameraFrameAsImage(now);
+    return;
+  }
+
   try {
     const result = state.faceLandmarker.detectForVideo(els.video, now);
+    state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
+    state.missCount = state.lastLandmarks ? 0 : state.missCount + 1;
+    state.lastDetectionAt = now;
+  } catch (error) {
+    state.lastLandmarks = null;
+    state.missCount += 1;
+    state.lastDetectionAt = now;
+    console.error(error);
+  }
+}
+
+function detectCameraFrameAsImage(now) {
+  try {
+    const maxSide = 640;
+    const ratio = Math.min(1, maxSide / Math.max(els.video.videoWidth, els.video.videoHeight));
+    const width = Math.max(1, Math.round(els.video.videoWidth * ratio));
+    const height = Math.max(1, Math.round(els.video.videoHeight * ratio));
+
+    if (detectionCanvas.width !== width || detectionCanvas.height !== height) {
+      detectionCanvas.width = width;
+      detectionCanvas.height = height;
+    }
+
+    detectionCtx.drawImage(els.video, 0, 0, width, height);
+    const result = state.faceLandmarker.detect(detectionCanvas);
     state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
     state.missCount = state.lastLandmarks ? 0 : state.missCount + 1;
     state.lastDetectionAt = now;
