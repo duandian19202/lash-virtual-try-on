@@ -215,6 +215,8 @@ const els = {
 const ctx = els.canvas.getContext("2d");
 const detectionCanvas = document.createElement("canvas");
 const detectionCtx = detectionCanvas.getContext("2d", { willReadFrequently: true });
+const MOBILE_IMAGE_DETECTION_INTERVAL = 72;
+const MOBILE_IMAGE_DETECTION_MAX_SIDE = 480;
 
 const state = {
   mode: "upload",
@@ -225,6 +227,7 @@ const state = {
   sourceType: null,
   stream: null,
   lastLandmarks: null,
+  smoothedLandmarks: null,
   selectedStyle: lashStyles[0],
   customStyles: [],
   showBefore: false,
@@ -710,6 +713,7 @@ function stopCamera() {
   state.animationId = null;
   state.lastDetectionAt = 0;
   state.missCount = 0;
+  state.smoothedLandmarks = null;
   state.cameraDetectionMode = "IMAGE";
   state.stream?.getTracks().forEach((track) => track.stop());
   state.stream = null;
@@ -730,7 +734,7 @@ function cameraLoop() {
   if (
     state.modelReady &&
     els.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
-    now - state.lastDetectionAt > 160
+    now - state.lastDetectionAt > getCameraDetectionInterval()
   ) {
     detectCameraFrame(now);
   }
@@ -748,11 +752,11 @@ function detectCameraFrame(now) {
 
   try {
     const result = state.faceLandmarker.detectForVideo(els.video, now);
-    state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
-    state.missCount = state.lastLandmarks ? 0 : state.missCount + 1;
+    updateCameraLandmarks(result.faceLandmarks?.[0] ?? null);
     state.lastDetectionAt = now;
   } catch (error) {
     state.lastLandmarks = null;
+    state.smoothedLandmarks = null;
     state.missCount += 1;
     state.lastDetectionAt = now;
     console.error(error);
@@ -761,7 +765,7 @@ function detectCameraFrame(now) {
 
 function detectCameraFrameAsImage(now) {
   try {
-    const maxSide = 640;
+    const maxSide = MOBILE_IMAGE_DETECTION_MAX_SIDE;
     const ratio = Math.min(1, maxSide / Math.max(els.video.videoWidth, els.video.videoHeight));
     const width = Math.max(1, Math.round(els.video.videoWidth * ratio));
     const height = Math.max(1, Math.round(els.video.videoHeight * ratio));
@@ -773,15 +777,56 @@ function detectCameraFrameAsImage(now) {
 
     detectionCtx.drawImage(els.video, 0, 0, width, height);
     const result = state.faceLandmarker.detect(detectionCanvas);
-    state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
-    state.missCount = state.lastLandmarks ? 0 : state.missCount + 1;
+    updateCameraLandmarks(result.faceLandmarks?.[0] ?? null);
     state.lastDetectionAt = now;
   } catch (error) {
     state.lastLandmarks = null;
+    state.smoothedLandmarks = null;
     state.missCount += 1;
     state.lastDetectionAt = now;
     console.error(error);
   }
+}
+
+function getCameraDetectionInterval() {
+  return state.cameraDetectionMode === "IMAGE" ? MOBILE_IMAGE_DETECTION_INTERVAL : 80;
+}
+
+function updateCameraLandmarks(nextLandmarks) {
+  if (!nextLandmarks) {
+    state.lastLandmarks = null;
+    state.smoothedLandmarks = null;
+    state.missCount += 1;
+    return;
+  }
+
+  state.smoothedLandmarks = smoothLandmarks(state.smoothedLandmarks, nextLandmarks);
+  state.lastLandmarks = state.smoothedLandmarks;
+  state.missCount = 0;
+}
+
+function smoothLandmarks(previous, next) {
+  if (!previous || previous.length !== next.length) return next.map((point) => ({ ...point }));
+
+  const movement = getAverageLandmarkMovement(previous, next);
+  const alpha = movement > 0.018 ? 0.82 : 0.62;
+
+  return next.map((point, index) => ({
+    x: previous[index].x + (point.x - previous[index].x) * alpha,
+    y: previous[index].y + (point.y - previous[index].y) * alpha,
+    z:
+      (previous[index].z ?? 0) +
+      ((point.z ?? 0) - (previous[index].z ?? 0)) * alpha,
+    visibility: point.visibility,
+  }));
+}
+
+function getAverageLandmarkMovement(previous, next) {
+  let total = 0;
+  for (let index = 0; index < next.length; index += 1) {
+    total += Math.hypot(next[index].x - previous[index].x, next[index].y - previous[index].y);
+  }
+  return total / next.length;
 }
 
 function getCameraStatus() {
