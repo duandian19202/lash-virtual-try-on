@@ -241,7 +241,8 @@ const state = {
     color: "all",
   },
   animationId: null,
-  lastVideoTime: -1,
+  lastDetectionAt: 0,
+  missCount: 0,
 };
 
 async function init() {
@@ -678,7 +679,7 @@ async function startCamera() {
     state.stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "user",
-        width: { ideal: 1280 },
+        width: { ideal: 720 },
         height: { ideal: 960 },
       },
       audio: false,
@@ -703,7 +704,8 @@ async function startCamera() {
 function stopCamera() {
   cancelAnimationFrame(state.animationId);
   state.animationId = null;
-  state.lastVideoTime = -1;
+  state.lastDetectionAt = 0;
+  state.missCount = 0;
   state.stream?.getTracks().forEach((track) => track.stop());
   state.stream = null;
   els.captureFrame.disabled = true;
@@ -719,16 +721,39 @@ function cameraLoop() {
 
   syncCanvasToVideo();
 
-  if (state.modelReady && els.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-    if (els.video.currentTime !== state.lastVideoTime) {
-      const result = state.faceLandmarker.detectForVideo(els.video, performance.now());
-      state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
-      state.lastVideoTime = els.video.currentTime;
-    }
+  const now = performance.now();
+  if (
+    state.modelReady &&
+    els.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+    now - state.lastDetectionAt > 110
+  ) {
+    detectVideoFrame(now);
   }
+
   redraw();
-  setStatus(state.lastLandmarks ? "实时试戴中" : "请正对镜头");
+  setStatus(getCameraStatus());
   state.animationId = requestAnimationFrame(cameraLoop);
+}
+
+function detectVideoFrame(now) {
+  try {
+    const result = state.faceLandmarker.detectForVideo(els.video, now);
+    state.lastLandmarks = result.faceLandmarks?.[0] ?? null;
+    state.missCount = state.lastLandmarks ? 0 : state.missCount + 1;
+    state.lastDetectionAt = now;
+  } catch (error) {
+    state.lastLandmarks = null;
+    state.missCount += 1;
+    state.lastDetectionAt = now;
+    console.error(error);
+  }
+}
+
+function getCameraStatus() {
+  if (state.lastLandmarks) return "实时试戴中";
+  if (!state.modelReady) return "模型加载中";
+  if (state.missCount > 12) return "未识别到人脸，请靠近并正对镜头";
+  return "正在识别人脸";
 }
 
 function waitForVideoFrame() {
