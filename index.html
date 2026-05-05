@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lash Studio Virtual Try-On</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./vendor/lucide/lucide.min.js" defer></script>
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="studio" aria-label="睫毛虚拟试戴">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Lash Studio</p>
+            <h1>睫毛虚拟试戴</h1>
+          </div>
+          <div class="privacy-pill">
+            <i data-lucide="shield-check" aria-hidden="true"></i>
+            <span>照片仅在浏览器本地处理</span>
+          </div>
+        </header>
+
+        <div class="workspace">
+          <aside class="panel tools" aria-label="试戴工具">
+            <div class="segmented" role="tablist" aria-label="输入方式">
+              <button id="uploadMode" class="active" type="button">
+                <i data-lucide="image-up" aria-hidden="true"></i>
+                上传
+              </button>
+              <button id="cameraMode" type="button">
+                <i data-lucide="camera" aria-hidden="true"></i>
+                摄像头
+              </button>
+            </div>
+
+            <label class="upload-drop" for="photoInput">
+              <i data-lucide="scan-face" aria-hidden="true"></i>
+              <span>上传正面脸部特写</span>
+              <small>JPG、PNG 或 WebP</small>
+            </label>
+            <input id="photoInput" type="file" accept="image/*" />
+
+            <div class="camera-actions hidden" id="cameraActions">
+              <button id="startCamera" class="primary" type="button">
+                <i data-lucide="video" aria-hidden="true"></i>
+                打开摄像头
+              </button>
+              <button id="captureFrame" type="button" disabled>
+                <i data-lucide="aperture" aria-hidden="true"></i>
+                拍照定格
+              </button>
+            </div>
+
+            <div class="control-group catalog-group">
+              <div class="group-head">
+                <span>厂家睫毛库</span>
+                <button id="toggleBefore" type="button" title="试戴前后对比">
+                  <i data-lucide="eye" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div class="selected-product" id="selectedProduct"></div>
+              <div class="catalog-filters" aria-label="睫毛款式筛选">
+                <label>
+                  <span>长度</span>
+                  <select id="lengthFilter">
+                    <option value="all">全部</option>
+                  </select>
+                </label>
+                <label>
+                  <span>翘度</span>
+                  <select id="curlFilter">
+                    <option value="all">全部</option>
+                  </select>
+                </label>
+                <label>
+                  <span>粗细</span>
+                  <select id="thicknessFilter">
+                    <option value="all">全部</option>
+                  </select>
+                </label>
+                <label>
+                  <span>颜色</span>
+                  <select id="colorFilter">
+                    <option value="all">全部</option>
+                  </select>
+                </label>
+              </div>
+              <div class="catalog-tools">
+                <output id="catalogCount">0 款</output>
+                <button id="clearFilters" type="button">
+                  <i data-lucide="filter-x" aria-hidden="true"></i>
+                  清除筛选
+                </button>
+              </div>
+              <div class="lash-grid" id="styleGrid"></div>
+            </div>
+
+            <div class="control-group">
+              <div class="group-head">
+                <span>我的睫毛素材</span>
+                <output id="libraryCount">0 款</output>
+              </div>
+              <label class="asset-upload" for="customLashInput">
+                <i data-lucide="paperclip" aria-hidden="true"></i>
+                <span>添加到睫毛库</span>
+              </label>
+              <input id="customLashInput" type="file" accept="image/png,image/webp,image/*" multiple />
+              <div class="library-grid" id="libraryGrid"></div>
+              <small class="helper-text">素材会保存在当前浏览器。建议上传单只上睫毛，透明背景，睫毛根部靠近图片底部。</small>
+            </div>
+
+            <div class="control-group">
+              <label>
+                <span>长度</span>
+                <output id="lengthValue">100%</output>
+              </label>
+              <input id="lengthRange" type="range" min="70" max="140" value="100" />
+
+              <label>
+                <span>浓密度</span>
+                <output id="densityValue">100%</output>
+              </label>
+              <input id="densityRange" type="range" min="60" max="160" value="100" />
+
+              <label>
+                <span>翘度微调</span>
+                <output id="curlValue">100%</output>
+              </label>
+              <input id="curlRange" type="range" min="70" max="145" value="100" />
+
+              <label>
+                <span>粗细微调</span>
+                <output id="thicknessValue">100%</output>
+              </label>
+              <input id="thicknessRange" type="range" min="70" max="150" value="100" />
+
+              <label>
+                <span>贴合高度</span>
+                <output id="liftValue">0</output>
+              </label>
+              <input id="liftRange" type="range" min="-28" max="28" value="0" />
+
+              <label>
+                <span>原睫毛遮盖</span>
+                <output id="concealValue">100%</output>
+              </label>
+              <input id="concealRange" type="range" min="0" max="140" value="100" />
+            </div>
+
+            <div class="control-group">
+              <div class="group-head">
+                <span>画面操作</span>
+              </div>
+              <div class="button-row">
+                <button id="resetBtn" type="button">
+                  <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+                  重置
+                </button>
+                <button id="downloadBtn" class="primary" type="button" disabled>
+                  <i data-lucide="download" aria-hidden="true"></i>
+                  保存预览
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          <section class="preview-area" aria-label="预览画布">
+            <div class="canvas-wrap">
+              <video id="video" playsinline muted></video>
+              <canvas id="canvas" width="1280" height="960"></canvas>
+              <div id="emptyState" class="empty-state">
+                <i data-lucide="sparkles" aria-hidden="true"></i>
+                <h2>上传照片或打开摄像头</h2>
+                <p>系统会识别眼部位置，并把睫毛自然贴合到上眼睑。</p>
+              </div>
+              <div id="statusBadge" class="status-badge">等待图片</div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
