@@ -1,0 +1,32 @@
+{
+  "designId": "TEST-CUSTOM-CAT-EYE",
+  "name": "测试自定义猫眼款",
+  "fiber": {
+    "curl": "C",
+    "thicknessMm": 0.1,
+    "color": "#020202",
+    "finish": "semi-matte",
+    "tipShape": "tapered"
+  },
+  "style": {
+    "type": "cat-eye",
+    "rootType": "soft-black-band",
+    "density": "standard",
+    "layers": 3
+  },
+  "mapping": {
+    "segments": [
+      { "zone": "inner", "position": 0, "lengthMm": 8, "density": 0.82, "angleDeg": -10 },
+      { "zone": "mid-inner", "position": 0.25, "lengthMm": 9, "density": 1, "angleDeg": -5 },
+      { "zone": "center", "position": 0.5, "lengthMm": 10, "density": 1.1, "angleDeg": 0 },
+      { "zone": "mid-outer", "position": 0.75, "lengthMm": 12, "density": 1.18, "angleDeg": 8 },
+      { "zone": "outer", "position": 1, "lengthMm": 13, "density": 1.12, "angleDeg": 16 }
+    ]
+  },
+  "render": {
+    "widthPx": 2400,
+    "heightPx": 700,
+    "seed": 20260506,
+    "output": "lash-library/3d/renders/TEST-CUSTOM-CAT-EYE/main.png"
+  }
+}

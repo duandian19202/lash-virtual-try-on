@@ -1,0 +1,91 @@
+{
+  "sku": "TEST-C-1013-010-DBK",
+  "modelVersion": "3d-v1",
+  "name": "测试眼尾拉长",
+  "series": "Test Cat Eye",
+  "category": "cat-eye",
+  "canvas": {
+    "widthPx": 2400,
+    "heightPx": 600,
+    "rootBaselinePx": 510
+  },
+  "units": {
+    "modelScale": 0.01,
+    "lashWidthMm": 34
+  },
+  "camera": {
+    "type": "orthographic",
+    "view": "front",
+    "orthographicScale": 4.2
+  },
+  "material": {
+    "preset": "deepBlackSatin",
+    "baseColor": "#020202",
+    "rootColor": "#010101",
+    "roughness": 0.86,
+    "specular": 0.02,
+    "anisotropic": 0.12,
+    "tipAlpha": 0.62
+  },
+  "root": {
+    "type": "soft-black-band",
+    "thicknessMm": 0.18,
+    "opacity": 0.62,
+    "softness": 0.45
+  },
+  "curlProfile": {
+    "grade": "C",
+    "rootStraightness": 0.08,
+    "midLift": 0.56,
+    "tipCurl": 0.74,
+    "liftAngleDeg": 44
+  },
+  "layers": [
+    {
+      "name": "baseLayer",
+      "fiberCount": 84,
+      "lengthMultiplier": 0.46,
+      "diameterMultiplier": 0.56,
+      "opacity": 0.82,
+      "depthRange": [-0.1, 0.02]
+    },
+    {
+      "name": "styleLayer",
+      "fiberCount": 62,
+      "lengthMultiplier": 0.92,
+      "diameterMultiplier": 0.68,
+      "opacity": 0.96,
+      "depthRange": [-0.02, 0.18]
+    }
+  ],
+  "mapping": {
+    "style": "outer-longer",
+    "segments": [
+      { "zone": "inner", "position": 0, "lengthMm": 7, "density": 0.86, "angleDeg": -13 },
+      { "zone": "mid-inner", "position": 0.25, "lengthMm": 9, "density": 1.04, "angleDeg": -6 },
+      { "zone": "center", "position": 0.5, "lengthMm": 10, "density": 1.12, "angleDeg": 0 },
+      { "zone": "mid-outer", "position": 0.75, "lengthMm": 12, "density": 1.2, "angleDeg": 8 },
+      { "zone": "outer", "position": 1, "lengthMm": 13, "density": 1.16, "angleDeg": 16 }
+    ]
+  },
+  "fan": {
+    "type": "classic",
+    "fanSize": 1,
+    "spreadDeg": 0,
+    "closedFanRatio": 0
+  },
+  "randomness": {
+    "seed": 1013010,
+    "position": 0.045,
+    "length": 0.09,
+    "angle": 0.045,
+    "depth": 0.12,
+    "curl": 0.08
+  },
+  "outputs": {
+    "sourceBlend": "lash-library/3d/assets/TEST-C-1013-010-DBK/source.blend",
+    "sourceGlb": "lash-library/3d/assets/TEST-C-1013-010-DBK/source.glb",
+    "mainPng": "lash-library/assets/TEST-C-1013-010-DBK/main.png",
+    "thumbPng": "lash-library/assets/TEST-C-1013-010-DBK/thumb.png"
+  }
+}

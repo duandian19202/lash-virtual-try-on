@@ -294,7 +294,13 @@
       "thicknessMm": "0.10",
       "material": "PBT",
       "tags": ["测试", "猫眼", "眼尾递增", "拉长"],
-      "asset": "assets/TEST-C-1013-010-DBK.png",
+      "asset": "assets/TEST-C-1013-010-DBK/main.png",
+      "assets": {
+        "main": "assets/TEST-C-1013-010-DBK/main.png",
+        "source3d": "3d/assets/TEST-C-1013-010-DBK/source.blend",
+        "sourceGlb": "3d/assets/TEST-C-1013-010-DBK/source.glb",
+        "params": "3d/assets/TEST-C-1013-010-DBK/params.json"
+      },
       "fiber": {
         "thicknessMm": 0.1,
         "finish": "satin",
@@ -325,6 +331,12 @@
         "rootBand": 0.58,
         "randomness": 0.18,
         "opacity": 0.93
+      },
+      "quality": {
+        "assetSource": "3d-calibrated-draft",
+        "assetStatus": "draft-3d",
+        "reviewedBy": null,
+        "version": "2026-05-06-v1"
       }
     },
     {

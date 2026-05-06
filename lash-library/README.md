@@ -7,6 +7,8 @@ This folder is the manufacturer lash product repository for the virtual try-on s
 - `catalog.json`: product records used by the website.
 - `schema.json`: field contract for product records.
 - `KNOWLEDGE.md`: professional eyelash extension knowledge model for product data and realistic rendering.
+- `docs/advanced-3d-pipeline.md`: high-quality calibrated 3D asset production workflow.
+- `3d/`: source 3D assets, param templates, scripts, and offline renders.
 - `assets/`: transparent PNG or WebP lash images, named by SKU.
 - `scripts/validate.mjs`: basic catalog validator.
 

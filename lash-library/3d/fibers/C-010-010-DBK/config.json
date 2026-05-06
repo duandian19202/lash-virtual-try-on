@@ -1,0 +1,37 @@
+{
+  "fiberId": "C-010-010-DBK",
+  "name": "C翘 10mm 0.10 深黑单根",
+  "curl": "C",
+  "lengthMm": 10,
+  "thicknessMm": 0.1,
+  "color": {
+    "name": "深黑",
+    "base": "#020202",
+    "edge": "#000000",
+    "highlight": "#2c2c2a"
+  },
+  "material": {
+    "type": "PBT",
+    "finish": "satin",
+    "roughness": 0.58,
+    "specular": 0.22,
+    "anisotropic": 0.45
+  },
+  "geometry": {
+    "rootRadius": 0.028,
+    "midRadius": 0.014,
+    "tipRadius": 0.0016,
+    "rootBulbRadius": 0.046,
+    "glueCollarRadius": 0.033,
+    "curveStrength": 0.62,
+    "rootStraightness": 0.18,
+    "tipHook": 0.12,
+    "twist": 0.08
+  },
+  "render": {
+    "widthPx": 1400,
+    "heightPx": 1400,
+    "samples": 160,
+    "output": "lash-library/3d/renders/fibers/C-010-010-DBK/main.png"
+  }
+}

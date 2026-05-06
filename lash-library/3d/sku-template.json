@@ -1,0 +1,81 @@
+{
+  "sku": "LS-C-1013-010-DBK",
+  "modelVersion": "3d-v1",
+  "canvas": {
+    "widthPx": 2400,
+    "heightPx": 600,
+    "rootBaselinePx": 500
+  },
+  "camera": {
+    "type": "orthographic",
+    "view": "front",
+    "focalLengthMm": 80
+  },
+  "material": {
+    "preset": "deepBlackSatin",
+    "baseColor": "#080706",
+    "roughness": 0.42,
+    "specular": 0.38,
+    "anisotropic": 0.75,
+    "tipAlpha": 0.72
+  },
+  "root": {
+    "type": "soft-black-band",
+    "thicknessMm": 0.18,
+    "opacity": 0.62,
+    "softness": 0.45
+  },
+  "curlProfile": {
+    "grade": "C",
+    "rootStraightness": 0.18,
+    "midLift": 0.42,
+    "tipCurl": 0.56,
+    "liftAngleDeg": 32
+  },
+  "layers": [
+    {
+      "name": "baseLayer",
+      "fiberCount": 34,
+      "lengthMultiplier": 0.82,
+      "diameterMultiplier": 0.82,
+      "opacity": 0.72,
+      "depthRange": [-0.14, 0.02]
+    },
+    {
+      "name": "styleLayer",
+      "fiberCount": 42,
+      "lengthMultiplier": 1,
+      "diameterMultiplier": 1,
+      "opacity": 0.95,
+      "depthRange": [-0.02, 0.16]
+    }
+  ],
+  "mapping": {
+    "style": "outer-longer",
+    "segments": [
+      { "zone": "inner", "position": 0, "lengthMm": 8, "density": 0.68, "angleDeg": -8 },
+      { "zone": "mid-inner", "position": 0.25, "lengthMm": 9, "density": 0.86, "angleDeg": -3 },
+      { "zone": "center", "position": 0.5, "lengthMm": 10, "density": 0.98, "angleDeg": 0 },
+      { "zone": "mid-outer", "position": 0.75, "lengthMm": 12, "density": 1.08, "angleDeg": 6 },
+      { "zone": "outer", "position": 1, "lengthMm": 13, "density": 1.12, "angleDeg": 12 }
+    ]
+  },
+  "fan": {
+    "type": "classic",
+    "fanSize": 1,
+    "spreadDeg": 0,
+    "closedFanRatio": 0
+  },
+  "randomness": {
+    "position": 0.14,
+    "length": 0.08,
+    "angle": 0.18,
+    "depth": 0.16
+  },
+  "outputs": {
+    "sourceBlend": "3d/assets/LS-C-1013-010-DBK/source.blend",
+    "sourceGlb": "3d/assets/LS-C-1013-010-DBK/source.glb",
+    "mainPng": "assets/LS-C-1013-010-DBK/main.png",
+    "thumbPng": "assets/LS-C-1013-010-DBK/thumb.png"
+  }
+}
