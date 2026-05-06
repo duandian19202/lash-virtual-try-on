@@ -151,6 +151,35 @@
 
             <div class="control-group">
               <div class="group-head">
+                <span>素材质感</span>
+              </div>
+              <label>
+                <span>睫毛透明度</span>
+                <output id="lashOpacityValue">92%</output>
+              </label>
+              <input id="lashOpacityRange" type="range" min="45" max="100" value="92" />
+
+              <label>
+                <span>根部融合</span>
+                <output id="rootBlendValue">55%</output>
+              </label>
+              <input id="rootBlendRange" type="range" min="0" max="100" value="55" />
+
+              <label>
+                <span>自然阴影</span>
+                <output id="shadowValue">35%</output>
+              </label>
+              <input id="shadowRange" type="range" min="0" max="100" value="35" />
+
+              <label>
+                <span>遮盖柔和度</span>
+                <output id="concealSoftnessValue">100%</output>
+              </label>
+              <input id="concealSoftnessRange" type="range" min="50" max="170" value="100" />
+            </div>
+
+            <div class="control-group">
+              <div class="group-head">
                 <span>画面操作</span>
               </div>
               <div class="button-row">
@@ -167,15 +196,27 @@
           </aside>
 
           <section class="preview-area" aria-label="预览画布">
-            <div class="canvas-wrap">
-              <video id="video" playsinline muted></video>
-              <canvas id="canvas" width="1280" height="960"></canvas>
-              <div id="emptyState" class="empty-state">
-                <i data-lucide="sparkles" aria-hidden="true"></i>
-                <h2>上传照片或打开摄像头</h2>
-                <p>系统会识别眼部位置，并把睫毛自然贴合到上眼睑。</p>
+            <div class="preview-stack">
+              <div class="canvas-wrap">
+                <video id="video" playsinline muted></video>
+                <canvas id="canvas" width="1280" height="960"></canvas>
+                <div id="emptyState" class="empty-state">
+                  <i data-lucide="sparkles" aria-hidden="true"></i>
+                  <h2>上传照片或打开摄像头</h2>
+                  <p>系统会识别眼部位置，并把睫毛自然贴合到上眼睑。</p>
+                </div>
+                <div id="statusBadge" class="status-badge">等待图片</div>
               </div>
-              <div id="statusBadge" class="status-badge">等待图片</div>
+
+              <div class="eye-closeup" aria-label="眼部特写">
+                <div class="closeup-head">
+                  <span>眼部特写</span>
+                  <small>用于检查睫毛根部、遮盖和贴合</small>
+                </div>
+                <div class="closeup-canvas-wrap">
+                  <canvas id="eyeZoomCanvas" width="900" height="900"></canvas>
+                </div>
+              </div>
             </div>
           </section>
         </div>

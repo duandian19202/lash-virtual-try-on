@@ -3,170 +3,9 @@ import {
   FilesetResolver,
 } from "./vendor/mediapipe/tasks-vision/vision_bundle.mjs";
 
-const lashStyles = [
-  {
-    id: "natural-soft-black",
-    sku: "LS-B-0810-005-BK",
-    series: "Natural Line",
-    name: "日常裸感",
-    color: "#15110f",
-    colorName: "黑",
-    lengthMm: "8-10mm",
-    curlGrade: "B",
-    thicknessMm: "0.05",
-    spikes: 22,
-    length: 0.46,
-    curve: 0.2,
-    thickness: 1.2,
-    fan: 0.88,
-  },
-  {
-    id: "commute-mid-black",
-    sku: "LS-C-0911-007-MBK",
-    series: "Daily Line",
-    name: "通勤自然",
-    color: "#0b0a09",
-    colorName: "中黑",
-    lengthMm: "9-11mm",
-    curlGrade: "C",
-    thicknessMm: "0.07",
-    spikes: 24,
-    length: 0.5,
-    curve: 0.32,
-    thickness: 1.28,
-    fan: 0.95,
-  },
-  {
-    id: "cat-deep-black",
-    sku: "LS-C-1013-010-DBK",
-    series: "Cat Eye",
-    name: "小猫眼",
-    color: "#0d0b0a",
-    colorName: "深黑",
-    lengthMm: "10-13mm",
-    curlGrade: "C",
-    thicknessMm: "0.10",
-    spikes: 25,
-    length: 0.54,
-    curve: 0.36,
-    thickness: 1.35,
-    fan: 1.15,
-  },
-  {
-    id: "doll-deep-black",
-    sku: "LS-D-1012-012-DBK",
-    series: "Doll Eye",
-    name: "甜娃娃",
-    color: "#11100f",
-    colorName: "深黑",
-    lengthMm: "10-12mm",
-    curlGrade: "D",
-    thicknessMm: "0.12",
-    spikes: 28,
-    length: 0.6,
-    curve: 0.48,
-    thickness: 1.45,
-    fan: 0.98,
-  },
-  {
-    id: "volume-ink",
-    sku: "LS-D-1114-015-DBK",
-    series: "Volume",
-    name: "浓密黑曜",
-    color: "#090807",
-    colorName: "深黑",
-    lengthMm: "11-14mm",
-    curlGrade: "D",
-    thicknessMm: "0.15",
-    spikes: 34,
-    length: 0.66,
-    curve: 0.58,
-    thickness: 1.7,
-    fan: 1.05,
-  },
-  {
-    id: "brown-air",
-    sku: "LS-C-0811-006-BR",
-    series: "Soft Brown",
-    name: "棕色空气感",
-    color: "#4b3124",
-    colorName: "棕色",
-    lengthMm: "8-11mm",
-    curlGrade: "C",
-    thicknessMm: "0.06",
-    spikes: 26,
-    length: 0.5,
-    curve: 0.34,
-    thickness: 1.18,
-    fan: 0.9,
-  },
-  {
-    id: "gray-mist",
-    sku: "LS-B-0912-007-GY",
-    series: "Mist Color",
-    name: "灰雾柔焦",
-    color: "#3b3f42",
-    colorName: "灰色",
-    lengthMm: "9-12mm",
-    curlGrade: "B",
-    thicknessMm: "0.07",
-    spikes: 25,
-    length: 0.52,
-    curve: 0.28,
-    thickness: 1.16,
-    fan: 0.9,
-  },
-  {
-    id: "wispy-black",
-    sku: "LS-L-0914-012-DBK",
-    series: "Wispy",
-    name: "漫画束感",
-    color: "#080706",
-    colorName: "深黑",
-    lengthMm: "9-14mm",
-    curlGrade: "L",
-    thicknessMm: "0.12",
-    spikes: 18,
-    length: 0.72,
-    curve: 0.62,
-    thickness: 1.55,
-    fan: 1.22,
-  },
-  {
-    id: "wine-accent",
-    sku: "LS-C-1013-010-WN",
-    series: "Color Accent",
-    name: "酒红点缀",
-    color: "#5b1824",
-    colorName: "酒红",
-    lengthMm: "10-13mm",
-    curlGrade: "C",
-    thicknessMm: "0.10",
-    spikes: 27,
-    length: 0.58,
-    curve: 0.42,
-    thickness: 1.32,
-    fan: 1.08,
-  },
-  {
-    id: "navy-accent",
-    sku: "LS-D-1012-010-NV",
-    series: "Color Accent",
-    name: "蓝黑微光",
-    color: "#111f32",
-    colorName: "蓝黑",
-    lengthMm: "10-12mm",
-    curlGrade: "D",
-    thicknessMm: "0.10",
-    spikes: 29,
-    length: 0.57,
-    curve: 0.52,
-    thickness: 1.34,
-    fan: 1.02,
-  },
-];
-
+const MANUFACTURER_LIBRARY_URL = "./lash-library/catalog.json";
 const STORAGE_KEY = "lash-studio-library-v1";
+let lashStyles = [];
 
 const eyeIndexes = {
   left: [33, 246, 161, 160, 159, 158, 157, 173, 133],
@@ -175,6 +14,7 @@ const eyeIndexes = {
 
 const els = {
   canvas: document.querySelector("#canvas"),
+  eyeZoomCanvas: document.querySelector("#eyeZoomCanvas"),
   video: document.querySelector("#video"),
   photoInput: document.querySelector("#photoInput"),
   customLashInput: document.querySelector("#customLashInput"),
@@ -199,12 +39,36 @@ const els = {
   thicknessRange: document.querySelector("#thicknessRange"),
   liftRange: document.querySelector("#liftRange"),
   concealRange: document.querySelector("#concealRange"),
+  leftXRange: document.querySelector("#leftXRange"),
+  leftYRange: document.querySelector("#leftYRange"),
+  leftScaleRange: document.querySelector("#leftScaleRange"),
+  leftRotateRange: document.querySelector("#leftRotateRange"),
+  rightXRange: document.querySelector("#rightXRange"),
+  rightYRange: document.querySelector("#rightYRange"),
+  rightScaleRange: document.querySelector("#rightScaleRange"),
+  rightRotateRange: document.querySelector("#rightRotateRange"),
+  lashOpacityRange: document.querySelector("#lashOpacityRange"),
+  rootBlendRange: document.querySelector("#rootBlendRange"),
+  shadowRange: document.querySelector("#shadowRange"),
+  concealSoftnessRange: document.querySelector("#concealSoftnessRange"),
   lengthValue: document.querySelector("#lengthValue"),
   densityValue: document.querySelector("#densityValue"),
   curlValue: document.querySelector("#curlValue"),
   thicknessValue: document.querySelector("#thicknessValue"),
   liftValue: document.querySelector("#liftValue"),
   concealValue: document.querySelector("#concealValue"),
+  leftXValue: document.querySelector("#leftXValue"),
+  leftYValue: document.querySelector("#leftYValue"),
+  leftScaleValue: document.querySelector("#leftScaleValue"),
+  leftRotateValue: document.querySelector("#leftRotateValue"),
+  rightXValue: document.querySelector("#rightXValue"),
+  rightYValue: document.querySelector("#rightYValue"),
+  rightScaleValue: document.querySelector("#rightScaleValue"),
+  rightRotateValue: document.querySelector("#rightRotateValue"),
+  lashOpacityValue: document.querySelector("#lashOpacityValue"),
+  rootBlendValue: document.querySelector("#rootBlendValue"),
+  shadowValue: document.querySelector("#shadowValue"),
+  concealSoftnessValue: document.querySelector("#concealSoftnessValue"),
   resetBtn: document.querySelector("#resetBtn"),
   downloadBtn: document.querySelector("#downloadBtn"),
   toggleBefore: document.querySelector("#toggleBefore"),
@@ -213,12 +77,14 @@ const els = {
 };
 
 const ctx = els.canvas.getContext("2d");
+const zoomCtx = els.eyeZoomCanvas.getContext("2d");
 const detectionCanvas = document.createElement("canvas");
 const detectionCtx = detectionCanvas.getContext("2d", { willReadFrequently: true });
 const MOBILE_IMAGE_DETECTION_INTERVAL = 110;
 const MOBILE_IMAGE_DETECTION_MAX_SIDE = 640;
 const MOBILE_RECOVERY_DETECTION_INTERVAL = 180;
 const MOBILE_RECOVERY_DETECTION_MAX_SIDE = 720;
+const MAX_RENDER_FIBERS_PER_EYE = 64;
 
 const state = {
   mode: "upload",
@@ -230,7 +96,7 @@ const state = {
   stream: null,
   lastLandmarks: null,
   smoothedLandmarks: null,
-  selectedStyle: lashStyles[0],
+  selectedStyle: null,
   customStyles: [],
   showBefore: false,
   controls: {
@@ -240,6 +106,14 @@ const state = {
     thickness: 1,
     lift: 0,
     conceal: 1,
+    concealSoftness: 1,
+    lashOpacity: 0.92,
+    rootBlend: 0.55,
+    shadow: 0.35,
+    eyeAdjustments: {
+      left: { x: 0, y: 0, scale: 1, rotate: 0 },
+      right: { x: 0, y: 0, scale: 1, rotate: 0 },
+    },
   },
   filters: {
     length: "all",
@@ -254,6 +128,7 @@ const state = {
 };
 
 async function init() {
+  await loadManufacturerLashLibrary();
   await loadCustomLashLibrary();
   renderFilterOptions();
   renderStyleCards();
@@ -267,6 +142,66 @@ async function init() {
   } else {
     window.addEventListener("load", () => window.lucide?.createIcons());
   }
+}
+
+async function loadManufacturerLashLibrary() {
+  try {
+    const response = await fetch(MANUFACTURER_LIBRARY_URL, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Failed to load ${MANUFACTURER_LIBRARY_URL}: ${response.status}`);
+    }
+    const catalog = await response.json();
+    lashStyles = await hydrateManufacturerAssets(normalizeManufacturerCatalog(catalog));
+    state.selectedStyle = lashStyles[0] ?? null;
+  } catch (error) {
+    lashStyles = [];
+    state.selectedStyle = null;
+    setStatus("厂家睫毛库加载失败");
+    console.error(error);
+  }
+}
+
+function normalizeManufacturerCatalog(catalog) {
+  const products = Array.isArray(catalog) ? catalog : catalog.products;
+  if (!Array.isArray(products)) return [];
+
+  return products.map((product) => ({
+    ...product,
+    name: product.name ?? product.nameZh,
+    curlGrade: product.curlGrade ?? product.curl,
+    spikes: Number(product.spikes ?? 24),
+    length: Number(product.render?.length ?? product.length ?? 0.52),
+    curve: Number(product.render?.curve ?? product.curve ?? 0.34),
+    thickness: Number(product.render?.thickness ?? product.thickness ?? 1.25),
+    fan: Number(product.render?.fan ?? product.fan ?? 1),
+  }));
+}
+
+async function hydrateManufacturerAssets(styles) {
+  return Promise.all(
+    styles.map(async (style) => {
+      if (!style.asset) return style;
+
+      try {
+        const image = await loadImage(resolveLibraryAssetUrl(style.asset));
+        return {
+          ...style,
+          assetImage: image,
+          renderMode: "asset",
+        };
+      } catch {
+        return {
+          ...style,
+          renderMode: "asset-missing",
+        };
+      }
+    }),
+  );
+}
+
+function resolveLibraryAssetUrl(assetPath) {
+  if (/^(https?:|data:|blob:)/.test(assetPath)) return assetPath;
+  return `./lash-library/${assetPath.replace(/^\.?\//, "")}`;
 }
 
 async function initModel() {
@@ -322,6 +257,18 @@ function bindEvents() {
   els.thicknessRange.addEventListener("input", updateControls);
   els.liftRange.addEventListener("input", updateControls);
   els.concealRange.addEventListener("input", updateControls);
+  els.leftXRange?.addEventListener("input", updateControls);
+  els.leftYRange?.addEventListener("input", updateControls);
+  els.leftScaleRange?.addEventListener("input", updateControls);
+  els.leftRotateRange?.addEventListener("input", updateControls);
+  els.rightXRange?.addEventListener("input", updateControls);
+  els.rightYRange?.addEventListener("input", updateControls);
+  els.rightScaleRange?.addEventListener("input", updateControls);
+  els.rightRotateRange?.addEventListener("input", updateControls);
+  els.lashOpacityRange.addEventListener("input", updateControls);
+  els.rootBlendRange.addEventListener("input", updateControls);
+  els.shadowRange.addEventListener("input", updateControls);
+  els.concealSoftnessRange.addEventListener("input", updateControls);
   els.lengthFilter.addEventListener("change", updateFilters);
   els.curlFilter.addEventListener("change", updateFilters);
   els.thicknessFilter.addEventListener("change", updateFilters);
@@ -418,13 +365,20 @@ function renderStyleCards() {
     `;
     card.addEventListener("click", () => {
       state.selectedStyle = style;
+      if (!style.assetImage) {
+        setStatus(`缺少真实素材：${style.asset}`);
+      }
       renderStyleCards();
       renderSelectedProduct();
       renderLibraryCards();
       redraw();
     });
     els.styleGrid.append(card);
-    drawLashSwatch(card.querySelector("canvas"), style);
+    if (style.assetImage) {
+      drawImageLashSwatch(card.querySelector("canvas"), style.assetImage);
+    } else {
+      drawMissingAssetSwatch(card.querySelector("canvas"));
+    }
   });
 }
 
@@ -439,6 +393,15 @@ function matchesCatalogFilters(style) {
 
 function renderSelectedProduct() {
   const style = state.selectedStyle;
+  if (!style) {
+    els.selectedProduct.innerHTML = `
+      <span>当前选择</span>
+      <strong>未载入款式</strong>
+      <small>请检查 lash-library/catalog.json</small>
+    `;
+    return;
+  }
+
   if (style.type === "image") {
     els.selectedProduct.innerHTML = `
       <span>当前选择</span>
@@ -451,7 +414,7 @@ function renderSelectedProduct() {
   els.selectedProduct.innerHTML = `
     <span>当前选择</span>
     <strong>${style.name}</strong>
-    <small>${style.sku} · ${style.series}</small>
+    <small>${style.sku} · ${style.series}${style.assetImage ? " · 真实素材" : " · 缺少真实素材"}</small>
     <div class="selected-specs">
       <span>${style.lengthMm}</span>
       <span>${style.curlGrade} 翘</span>
@@ -531,6 +494,22 @@ function drawImageLashSwatch(canvas, image) {
   swatchCtx.drawImage(image, (canvas.width - width) / 2, canvas.height - height - 4, width, height);
 }
 
+function drawMissingAssetSwatch(canvas) {
+  const swatchCtx = canvas.getContext("2d");
+  swatchCtx.clearRect(0, 0, canvas.width, canvas.height);
+  swatchCtx.fillStyle = "#f4f6f3";
+  swatchCtx.fillRect(0, 0, canvas.width, canvas.height);
+  swatchCtx.strokeStyle = "#cfd6d2";
+  swatchCtx.setLineDash([6, 5]);
+  swatchCtx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
+  swatchCtx.setLineDash([]);
+  swatchCtx.fillStyle = "#68737a";
+  swatchCtx.font = "700 20px system-ui, sans-serif";
+  swatchCtx.textAlign = "center";
+  swatchCtx.textBaseline = "middle";
+  swatchCtx.fillText("待上传真实素材", canvas.width / 2, canvas.height / 2);
+}
+
 function updateControls() {
   state.controls.length = Number(els.lengthRange.value) / 100;
   state.controls.density = Number(els.densityRange.value) / 100;
@@ -538,12 +517,40 @@ function updateControls() {
   state.controls.thickness = Number(els.thicknessRange.value) / 100;
   state.controls.lift = Number(els.liftRange.value);
   state.controls.conceal = Number(els.concealRange.value) / 100;
+  state.controls.concealSoftness = Number(els.concealSoftnessRange.value) / 100;
+  state.controls.lashOpacity = Number(els.lashOpacityRange.value) / 100;
+  state.controls.rootBlend = Number(els.rootBlendRange.value) / 100;
+  state.controls.shadow = Number(els.shadowRange.value) / 100;
+  state.controls.eyeAdjustments.left = {
+    x: Number(els.leftXRange?.value ?? 0),
+    y: Number(els.leftYRange?.value ?? 0),
+    scale: Number(els.leftScaleRange?.value ?? 100) / 100,
+    rotate: Number(els.leftRotateRange?.value ?? 0),
+  };
+  state.controls.eyeAdjustments.right = {
+    x: Number(els.rightXRange?.value ?? 0),
+    y: Number(els.rightYRange?.value ?? 0),
+    scale: Number(els.rightScaleRange?.value ?? 100) / 100,
+    rotate: Number(els.rightRotateRange?.value ?? 0),
+  };
   els.lengthValue.value = `${els.lengthRange.value}%`;
   els.densityValue.value = `${els.densityRange.value}%`;
   els.curlValue.value = `${els.curlRange.value}%`;
   els.thicknessValue.value = `${els.thicknessRange.value}%`;
   els.liftValue.value = els.liftRange.value;
   els.concealValue.value = `${els.concealRange.value}%`;
+  els.concealSoftnessValue.value = `${els.concealSoftnessRange.value}%`;
+  els.lashOpacityValue.value = `${els.lashOpacityRange.value}%`;
+  els.rootBlendValue.value = `${els.rootBlendRange.value}%`;
+  els.shadowValue.value = `${els.shadowRange.value}%`;
+  if (els.leftXValue) els.leftXValue.value = els.leftXRange?.value ?? 0;
+  if (els.leftYValue) els.leftYValue.value = els.leftYRange?.value ?? 0;
+  if (els.leftScaleValue) els.leftScaleValue.value = `${els.leftScaleRange?.value ?? 100}%`;
+  if (els.leftRotateValue) els.leftRotateValue.value = `${els.leftRotateRange?.value ?? 0}°`;
+  if (els.rightXValue) els.rightXValue.value = els.rightXRange?.value ?? 0;
+  if (els.rightYValue) els.rightYValue.value = els.rightYRange?.value ?? 0;
+  if (els.rightScaleValue) els.rightScaleValue.value = `${els.rightScaleRange?.value ?? 100}%`;
+  if (els.rightRotateValue) els.rightRotateValue.value = `${els.rightRotateRange?.value ?? 0}°`;
   redraw();
 }
 
@@ -554,6 +561,18 @@ function resetAdjustments() {
   els.thicknessRange.value = 100;
   els.liftRange.value = 0;
   els.concealRange.value = 100;
+  els.concealSoftnessRange.value = 100;
+  els.lashOpacityRange.value = 92;
+  els.rootBlendRange.value = 55;
+  els.shadowRange.value = 35;
+  if (els.leftXRange) els.leftXRange.value = 0;
+  if (els.leftYRange) els.leftYRange.value = 0;
+  if (els.leftScaleRange) els.leftScaleRange.value = 100;
+  if (els.leftRotateRange) els.leftRotateRange.value = 0;
+  if (els.rightXRange) els.rightXRange.value = 0;
+  if (els.rightYRange) els.rightYRange.value = 0;
+  if (els.rightScaleRange) els.rightScaleRange.value = 100;
+  if (els.rightRotateRange) els.rightRotateRange.value = 0;
   state.showBefore = false;
   els.toggleBefore.classList.remove("active");
   updateControls();
@@ -641,8 +660,8 @@ function saveCustomLashLibrary() {
 
 function deleteCustomStyle(id) {
   state.customStyles = state.customStyles.filter((style) => style.id !== id);
-  if (state.selectedStyle.id === id) {
-    state.selectedStyle = lashStyles[0];
+  if (state.selectedStyle?.id === id) {
+    state.selectedStyle = lashStyles[0] ?? null;
   }
   saveCustomLashLibrary();
   renderStyleCards();
@@ -898,23 +917,44 @@ function fitCanvasToSource(width, height) {
 function redraw() {
   if (!state.source) {
     drawEmptyCanvas();
+    drawEmptyEyeCloseup("等待图片");
     return;
   }
   ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
   ctx.drawImage(state.source, 0, 0, els.canvas.width, els.canvas.height);
-  if (state.showBefore) return;
 
   const eyes = getEyeCurves();
-  if (!eyes) return;
+  if (state.showBefore) {
+    if (eyes) {
+      updateEyeCloseup(eyes);
+    } else {
+      drawEmptyEyeCloseup("等待识别眼部");
+    }
+    return;
+  }
+
+  if (!eyes || !state.selectedStyle) {
+    drawEmptyEyeCloseup("等待识别眼部");
+    return;
+  }
+
   concealNaturalLashes(ctx, eyes.left, state.controls);
   concealNaturalLashes(ctx, eyes.right, state.controls);
+  const adjustedEyes = {
+    left: adjustEyeCurve(eyes.left, state.controls.eyeAdjustments.left),
+    right: adjustEyeCurve(eyes.right, state.controls.eyeAdjustments.right),
+  };
   if (state.selectedStyle.type === "image") {
-    drawImageLashSet(ctx, eyes.left, state.selectedStyle.image, state.controls, false);
-    drawImageLashSet(ctx, eyes.right, state.selectedStyle.image, state.controls, true);
+    drawImageLashSet(ctx, adjustedEyes.left, state.selectedStyle.image, state.controls, false);
+    drawImageLashSet(ctx, adjustedEyes.right, state.selectedStyle.image, state.controls, true);
+  } else if (state.selectedStyle.assetImage) {
+    drawImageLashSet(ctx, adjustedEyes.left, state.selectedStyle.assetImage, state.controls, false);
+    drawImageLashSet(ctx, adjustedEyes.right, state.selectedStyle.assetImage, state.controls, true);
   } else {
-    drawLashSet(ctx, eyes.left, state.selectedStyle, state.controls);
-    drawLashSet(ctx, eyes.right, state.selectedStyle, state.controls);
+    setStatus(`缺少真实素材：${state.selectedStyle.asset}`);
   }
+
+  updateEyeCloseup(adjustedEyes);
 }
 
 function drawEmptyCanvas() {
@@ -924,6 +964,85 @@ function drawEmptyCanvas() {
   gradient.addColorStop(1, "#263436");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
+}
+
+function drawEmptyEyeCloseup(message) {
+  zoomCtx.clearRect(0, 0, els.eyeZoomCanvas.width, els.eyeZoomCanvas.height);
+  const gradient = zoomCtx.createLinearGradient(0, 0, els.eyeZoomCanvas.width, els.eyeZoomCanvas.height);
+  gradient.addColorStop(0, "#101517");
+  gradient.addColorStop(1, "#1d292b");
+  zoomCtx.fillStyle = gradient;
+  zoomCtx.fillRect(0, 0, els.eyeZoomCanvas.width, els.eyeZoomCanvas.height);
+  zoomCtx.fillStyle = "rgba(255, 255, 255, 0.78)";
+  zoomCtx.font = "700 34px system-ui, sans-serif";
+  zoomCtx.textAlign = "center";
+  zoomCtx.textBaseline = "middle";
+  zoomCtx.fillText(message, els.eyeZoomCanvas.width / 2, els.eyeZoomCanvas.height / 2);
+}
+
+function updateEyeCloseup(eyes) {
+  const crop = getEyeCrop(eyes);
+  if (!crop) {
+    drawEmptyEyeCloseup("等待识别眼部");
+    return;
+  }
+
+  zoomCtx.clearRect(0, 0, els.eyeZoomCanvas.width, els.eyeZoomCanvas.height);
+  zoomCtx.fillStyle = "#101517";
+  zoomCtx.fillRect(0, 0, els.eyeZoomCanvas.width, els.eyeZoomCanvas.height);
+  zoomCtx.imageSmoothingEnabled = true;
+  zoomCtx.imageSmoothingQuality = "high";
+  zoomCtx.drawImage(
+    els.canvas,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    els.eyeZoomCanvas.width,
+    els.eyeZoomCanvas.height,
+  );
+}
+
+function getEyeCrop(eyes) {
+  const focusEye = getFocusEyeForCloseup(eyes);
+  if (!focusEye) return null;
+
+  const points = [...focusEye];
+  const sorted = [...focusEye].sort((a, b) => a.x - b.x);
+  const eyeCenter = pointAt(sorted, 0.5);
+  const minX = Math.min(...points.map((point) => point.x));
+  const maxX = Math.max(...points.map((point) => point.x));
+  const minY = Math.min(...points.map((point) => point.y));
+  const maxY = Math.max(...points.map((point) => point.y));
+  const eyeWidth = Math.max(1, maxX - minX);
+  const eyeHeight = Math.max(1, maxY - minY);
+  const cropSize = Math.min(
+    Math.max(eyeWidth * 2.45, eyeHeight * 7.2, els.canvas.width * 0.085),
+    Math.min(els.canvas.width, els.canvas.height) * 0.28,
+  );
+  const x = eyeCenter.x - cropSize * 0.46;
+  const y = eyeCenter.y - cropSize * 0.34;
+
+  return clampSquareCrop(x, y, cropSize);
+}
+
+function getFocusEyeForCloseup(eyes) {
+  if (!eyes?.left?.length && !eyes?.right?.length) return null;
+  if (!eyes?.left?.length) return eyes.right;
+  if (!eyes?.right?.length) return eyes.left;
+  return eyes.left;
+}
+
+function clampSquareCrop(x, y, size) {
+  const safeSize = Math.min(size, els.canvas.width, els.canvas.height);
+  return {
+    x: Math.max(0, Math.min(x, els.canvas.width - safeSize)),
+    y: Math.max(0, Math.min(y, els.canvas.height - safeSize)),
+    width: safeSize,
+    height: safeSize,
+  };
 }
 
 function getEyeCurves() {
@@ -965,6 +1084,23 @@ function scalePoint(point) {
   };
 }
 
+function adjustEyeCurve(points, adjustment) {
+  if (!adjustment) return points;
+  const center = pointAt([...points].sort((a, b) => a.x - b.x), 0.5);
+  const rotation = (adjustment.rotate * Math.PI) / 180;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+
+  return points.map((point) => {
+    const dx = (point.x - center.x) * adjustment.scale;
+    const dy = (point.y - center.y) * adjustment.scale;
+    return {
+      x: center.x + dx * cos - dy * sin + adjustment.x,
+      y: center.y + dx * sin + dy * cos + adjustment.y,
+    };
+  });
+}
+
 function concealNaturalLashes(targetCtx, points, controls) {
   if (controls.conceal <= 0) return;
 
@@ -975,24 +1111,25 @@ function concealNaturalLashes(targetCtx, points, controls) {
   const coverWidth = Math.max(12, eyeWidth * 0.11) * controls.conceal;
   const lift = Math.max(7, eyeWidth * 0.052);
   const skinColor = sampleSkinColor(ordered, eyeWidth);
+  const softness = controls.concealSoftness ?? 1;
 
   targetCtx.save();
   targetCtx.lineCap = "round";
   targetCtx.lineJoin = "round";
-  targetCtx.filter = `blur(${Math.max(2.5, eyeWidth * 0.014)}px)`;
-  targetCtx.globalAlpha = Math.min(0.96, 0.76 + controls.conceal * 0.18);
+  targetCtx.filter = `blur(${Math.max(2.5, eyeWidth * 0.014 * softness)}px)`;
+  targetCtx.globalAlpha = Math.min(0.94, 0.66 + controls.conceal * 0.17);
   targetCtx.strokeStyle = skinColor;
   targetCtx.lineWidth = coverWidth;
   drawOffsetEyeStroke(targetCtx, ordered, -lift);
-  targetCtx.globalAlpha = Math.min(0.72, 0.38 + controls.conceal * 0.2);
-  targetCtx.lineWidth = coverWidth * 0.72;
+  targetCtx.globalAlpha = Math.min(0.68, 0.34 + controls.conceal * 0.18);
+  targetCtx.lineWidth = coverWidth * (0.62 + softness * 0.12);
   drawOffsetEyeStroke(targetCtx, ordered, -lift * 1.7);
   targetCtx.restore();
 
   targetCtx.save();
-  targetCtx.globalAlpha = Math.min(0.42, 0.18 + controls.conceal * 0.12);
+  targetCtx.globalAlpha = Math.min(0.36, 0.14 + controls.conceal * 0.1);
   targetCtx.strokeStyle = skinColor;
-  targetCtx.lineWidth = Math.max(3, eyeWidth * 0.025);
+  targetCtx.lineWidth = Math.max(3, eyeWidth * 0.022 * softness);
   drawOffsetEyeStroke(targetCtx, ordered, -lift * 0.28);
   targetCtx.restore();
 }
@@ -1086,26 +1223,48 @@ function drawImageLashSet(targetCtx, points, image, controls, mirror) {
   const aspect = image.naturalHeight / image.naturalWidth;
   const renderHeight =
     renderWidth * aspect * (0.7 + controls.density * 0.18 + controls.curl * 0.12);
+  const rootBlend = controls.rootBlend ?? 0.55;
+  const shadow = controls.shadow ?? 0.35;
+  const opacity = controls.lashOpacity ?? 0.92;
+
+  drawLashShadow(targetCtx, lifted, eyeWidth, shadow);
 
   targetCtx.save();
   targetCtx.translate(center.x, center.y - renderHeight * 0.42);
   targetCtx.rotate(angle);
-  targetCtx.globalAlpha = Math.min(1, 0.72 + controls.density * 0.2);
+  targetCtx.globalAlpha = Math.min(1, opacity * (0.82 + controls.density * 0.14));
   targetCtx.scale(mirror ? -1 : 1, 1);
   targetCtx.drawImage(image, -renderWidth / 2, -renderHeight / 2, renderWidth, renderHeight);
   targetCtx.restore();
+
+  drawRootBlendLine(targetCtx, lifted, eyeWidth, rootBlend);
 }
 
 function drawLashSet(targetCtx, points, style, controls) {
+  if (style.layout?.segments?.length) {
+    try {
+      drawProductionLashSet(targetCtx, points, style, controls);
+      return;
+    } catch (error) {
+      console.warn("Production lash render failed, using fallback renderer.", error);
+    }
+  }
+
+  drawBasicLashSet(targetCtx, points, style, controls);
+}
+
+function drawBasicLashSet(targetCtx, points, style, controls) {
   const ordered = [...points].sort((a, b) => a.x - b.x);
   const lifted = ordered.map((point) => ({ ...point, y: point.y + controls.lift }));
   const totalWidth = lifted[lifted.length - 1].x - lifted[0].x;
   const spikeCount = Math.max(8, Math.round(style.spikes * controls.density));
 
+  drawLashShadow(targetCtx, lifted, totalWidth, controls.shadow ?? 0.35);
+
   targetCtx.save();
   targetCtx.lineCap = "round";
   targetCtx.lineJoin = "round";
-  targetCtx.globalAlpha = controls.opacity ?? 0.92;
+  targetCtx.globalAlpha = controls.opacity ?? (controls.lashOpacity ?? 0.92);
 
   drawBaseLine(targetCtx, lifted, style, controls);
 
@@ -1141,6 +1300,345 @@ function drawLashSet(targetCtx, points, style, controls) {
     }
   }
 
+  targetCtx.restore();
+  drawRootBlendLine(targetCtx, lifted, totalWidth, controls.rootBlend ?? 0.55);
+}
+
+function drawProductionLashSet(targetCtx, points, style, controls) {
+  const ordered = [...points].sort((a, b) => a.x - b.x);
+  const lifted = ordered.map((point) => ({ ...point, y: point.y + controls.lift }));
+  const totalWidth = lifted[lifted.length - 1].x - lifted[0].x;
+  const viewerLeftEye = pointAt(lifted, 0.5).x < els.canvas.width / 2;
+  const render = style.render ?? {};
+  const fiber = style.fiber ?? {};
+  const curlProfile = style.curlProfile ?? {};
+  const baseCount = Math.max(14, Number(style.spikes ?? 36));
+  const densityScale = controls.density * getAverageSegmentDensity(style);
+  const lashCount = Math.min(
+    MAX_RENDER_FIBERS_PER_EYE,
+    Math.max(10, Math.round(baseCount * densityScale)),
+  );
+  const curl = Number(curlProfile.curveStrength ?? style.curve ?? 0.36) * controls.curl;
+  const rootBand = Number(render.rootBand ?? 0.5);
+  const randomness = Number(render.randomness ?? 0.16);
+  const opacity = Math.min(1, Number(render.opacity ?? controls.lashOpacity ?? 0.92));
+  const thicknessBase = productionThicknessToLineWidth(
+    Number(fiber.thicknessMm ?? style.thicknessMm ?? 0.1),
+    style,
+  );
+  const finish = fiber.finish ?? "semi-matte";
+  const layoutStyle = getLashLayoutStyle(style);
+
+  drawLashShadow(targetCtx, lifted, totalWidth, controls.shadow ?? 0.35);
+
+  targetCtx.save();
+  targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
+  targetCtx.globalAlpha = opacity;
+
+  drawBaseLine(targetCtx, lifted, style, {
+    ...controls,
+    thickness: controls.thickness * (0.72 + rootBand * 0.56),
+  });
+
+  const fibers = [];
+  for (let index = 0; index < lashCount; index += 1) {
+    const rawT = lashCount === 1 ? 0.5 : index / (lashCount - 1);
+    const spacingJitter = deterministicJitter(style.id, index, 1) * randomness * 0.42;
+    const t = clamp(rawT + spacingJitter / Math.max(1, lashCount), 0.015, 0.985);
+    const productionT = viewerLeftEye ? 1 - t : t;
+    const profile = sampleLayoutProfile(style, productionT);
+    const skipChance = Math.max(0, 0.74 - profile.density);
+    if (skipChance > 0 && deterministicUnit(style.id, index, 2) < skipChance) {
+      continue;
+    }
+
+    const base = pointAt(lifted, t);
+    const tangent = tangentAt(lifted, t);
+    const normal = normalize({ x: -tangent.y, y: tangent.x });
+    const outward = normal.y > 0 ? { x: -normal.x, y: -normal.y } : normal;
+    const depth = deterministicJitter(style.id, index, 8);
+    const layerOffset = totalWidth * 0.006 * depth;
+    const layeredBase = {
+      x: base.x + outward.x * layerOffset + tangent.x * deterministicJitter(style.id, index, 9) * totalWidth * 0.003,
+      y: base.y + outward.y * layerOffset + depth * totalWidth * 0.004,
+    };
+    const zoneLength = Number(profile.lengthMm || getLengthFromRange(style.lengthMm));
+    const lengthRatio = zoneLength / 10;
+    const cluster = getClusterBoost(style, productionT);
+    const edgeLean = (productionT - 0.5) * totalWidth * 0.035 * Number(render.fan ?? style.fan ?? 1);
+    const densityLean = deterministicJitter(style.id, index, 3) * totalWidth * randomness * 0.018;
+    const lashLength =
+      totalWidth *
+      0.108 *
+      lengthRatio *
+      controls.length *
+      (0.82 + profile.density * 0.18) *
+      (0.92 + cluster * 0.22);
+    const curlLift = lashLength * (0.36 + curl * 0.62);
+    const tip = {
+      x: layeredBase.x + outward.x * lashLength + edgeLean + densityLean,
+      y: layeredBase.y + outward.y * lashLength - curlLift * (0.94 + depth * 0.08),
+    };
+    const lineWidth =
+      thicknessBase *
+      controls.thickness *
+      (0.74 + profile.density * 0.26) *
+      (0.88 + cluster * 0.18);
+
+    const mainFiber = {
+      base: layeredBase,
+      tip,
+      tangent,
+      curl,
+      lineWidth,
+      color: style.color,
+      finish,
+      depth,
+      profile,
+      cluster,
+      index,
+      kind: "main",
+    };
+    fibers.push(mainFiber);
+
+    if (layoutStyle === "spike-cluster" && cluster > 0.38) {
+      fibers.push(makeSideFiber(mainFiber, -1));
+      fibers.push(makeSideFiber(mainFiber, 1));
+    }
+
+    if (layoutStyle === "full-volume" && index % 3 === 0) {
+      fibers.push(makeSideFiber(mainFiber, 1, 0.76));
+    }
+  }
+
+  fibers
+    .sort((a, b) => a.depth - b.depth)
+    .slice(0, MAX_RENDER_FIBERS_PER_EYE)
+    .forEach((fiber) => drawSpatialFiber(targetCtx, fiber, opacity));
+
+  targetCtx.restore();
+  drawRootBlendLine(targetCtx, lifted, totalWidth, (controls.rootBlend ?? 0.55) * (0.82 + rootBand * 0.28));
+}
+
+function makeSideFiber(fiber, direction, scale = 0.62) {
+  const offset = {
+    x: fiber.tangent.x * 7 * direction,
+    y: fiber.tangent.y * 7 * direction,
+  };
+  return {
+    ...fiber,
+    tip: {
+      x: fiber.tip.x + offset.x,
+      y: fiber.tip.y + offset.y,
+    },
+    lineWidth: fiber.lineWidth * scale,
+    curl: fiber.curl * 0.86,
+    depth: fiber.depth - 0.18,
+    kind: "side",
+  };
+}
+
+function drawSpatialFiber(targetCtx, fiber, baseOpacity) {
+  const depthAlpha = clamp(0.66 + fiber.depth * 0.22, 0.46, 0.98);
+  const shadowOffset = {
+    x: 0.9 + fiber.depth * 0.35,
+    y: 1.5 + Math.abs(fiber.depth) * 1.2,
+  };
+
+  drawFastFiberShadow(targetCtx, fiber, shadowOffset, baseOpacity * depthAlpha);
+
+  targetCtx.save();
+  targetCtx.globalAlpha = baseOpacity * depthAlpha;
+  targetCtx.filter = "none";
+  drawTaperedLash(targetCtx, fiber.base, fiber.tip, fiber.tangent, fiber.curl, fiber.lineWidth, fiber.color, fiber.finish, {
+    highlight: fiber.depth > -0.25 ? 1 : 0.55,
+    tipFade: 1,
+  });
+  targetCtx.restore();
+}
+
+function drawFastFiberShadow(targetCtx, fiber, offset, alpha) {
+  const base = addPoint(fiber.base, offset);
+  const tip = addPoint(fiber.tip, offset);
+  const control = {
+    x: base.x + (tip.x - base.x) * 0.42 + fiber.tangent.x * 18 * fiber.curl,
+    y: base.y + (tip.y - base.y) * 0.34 - 14 * fiber.curl,
+  };
+
+  targetCtx.save();
+  targetCtx.globalAlpha = alpha * 0.18;
+  targetCtx.strokeStyle = "rgba(10, 7, 5, 0.55)";
+  targetCtx.lineWidth = fiber.lineWidth * 0.9;
+  targetCtx.beginPath();
+  targetCtx.moveTo(base.x, base.y);
+  targetCtx.quadraticCurveTo(control.x, control.y, tip.x, tip.y);
+  targetCtx.stroke();
+  targetCtx.restore();
+}
+
+function getAverageSegmentDensity(style) {
+  const segments = style.layout?.segments ?? [];
+  if (segments.length === 0) return 1;
+  return segments.reduce((sum, segment) => sum + Number(segment.density ?? 1), 0) / segments.length;
+}
+
+function sampleLayoutProfile(style, t) {
+  const segments = style.layout?.segments ?? [];
+  if (segments.length === 0) {
+    return {
+      lengthMm: getLengthFromRange(style.lengthMm),
+      density: 1,
+    };
+  }
+
+  const scaled = clamp(t, 0, 1) * (segments.length - 1);
+  const index = Math.min(segments.length - 2, Math.floor(scaled));
+  const localT = scaled - index;
+  const current = segments[index];
+  const next = segments[index + 1] ?? current;
+
+  return {
+    lengthMm: lerpNumber(Number(current.lengthMm), Number(next.lengthMm), localT),
+    density: lerpNumber(Number(current.density ?? 1), Number(next.density ?? 1), localT),
+  };
+}
+
+function getClusterBoost(style, t) {
+  const clusters = style.layout?.clusters ?? [];
+  if (clusters.length === 0) return 0;
+  return clusters.reduce((maxBoost, cluster) => {
+    const distance = Math.abs(t - Number(cluster.position));
+    const width = Number(cluster.width ?? 0.055);
+    const boost = Math.max(0, 1 - distance / width) * Number(cluster.strength ?? 0);
+    return Math.max(maxBoost, boost);
+  }, 0);
+}
+
+function getLashLayoutStyle(style) {
+  return style.layout?.style ?? style.layout?.type ?? "";
+}
+
+function productionThicknessToLineWidth(thicknessMm, style) {
+  const fallback = Number(style.thickness ?? 1.25);
+  if (!Number.isFinite(thicknessMm)) return fallback;
+  return clamp(0.72 + thicknessMm * 7.4, 0.9, 2.15);
+}
+
+function getLengthFromRange(value) {
+  const numbers = String(value).match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+  if (numbers.length === 0) return 10;
+  return numbers.reduce((sum, number) => sum + number, 0) / numbers.length;
+}
+
+function drawTaperedLash(targetCtx, base, tip, tangent, curve, lineWidth, color, finish, options = {}) {
+  const control = {
+    x: base.x + (tip.x - base.x) * 0.42 + tangent.x * 18 * curve,
+    y: base.y + (tip.y - base.y) * 0.34 - 14 * curve,
+  };
+  const mid = quadraticPoint(base, control, tip, 0.54);
+  const nearTip = quadraticPoint(base, control, tip, 0.82);
+  const tipFade = options.tipFade ?? 1;
+  const highlightScale = options.highlight ?? 1;
+  const highlightAlpha = (finish === "gloss" ? 0.2 : finish === "satin" ? 0.13 : 0.06) * highlightScale;
+
+  targetCtx.save();
+  targetCtx.strokeStyle = adjustColor(color, -16, 0.92);
+  strokeQuadraticSegment(targetCtx, base, control, mid, lineWidth * 1.18);
+  targetCtx.strokeStyle = color;
+  strokeQuadraticSegment(targetCtx, base, control, mid, lineWidth);
+  targetCtx.globalAlpha *= 0.82;
+  strokeQuadraticSegment(targetCtx, mid, control, nearTip, lineWidth * 0.52);
+  targetCtx.globalAlpha *= 0.78 * tipFade;
+  strokeQuadraticSegment(targetCtx, nearTip, control, tip, Math.max(0.2, lineWidth * 0.16));
+
+  if (highlightAlpha > 0) {
+    targetCtx.save();
+    targetCtx.globalAlpha = highlightAlpha;
+    targetCtx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    const highlightStart = quadraticPoint(base, control, tip, 0.12);
+    const highlightEnd = quadraticPoint(base, control, tip, 0.48);
+    strokeQuadraticSegment(targetCtx, highlightStart, control, highlightEnd, Math.max(0.2, lineWidth * 0.14));
+    targetCtx.restore();
+  }
+  targetCtx.restore();
+}
+
+function drawClusterSideLash(targetCtx, base, tip, tangent, curl, lineWidth, color, direction) {
+  const offset = {
+    x: tangent.x * 7 * direction,
+    y: tangent.y * 7 * direction,
+  };
+  const sideTip = {
+    x: tip.x + offset.x,
+    y: tip.y + offset.y,
+  };
+  targetCtx.save();
+  targetCtx.globalAlpha *= 0.58;
+  drawTaperedLash(targetCtx, base, sideTip, tangent, curl * 0.86, lineWidth * 0.56, color, "semi-matte");
+  targetCtx.restore();
+}
+
+function strokeQuadraticSegment(targetCtx, start, control, end, lineWidth) {
+  targetCtx.beginPath();
+  targetCtx.moveTo(start.x, start.y);
+  targetCtx.quadraticCurveTo(control.x, control.y, end.x, end.y);
+  targetCtx.lineWidth = lineWidth;
+  targetCtx.stroke();
+}
+
+function quadraticPoint(start, control, end, t) {
+  const oneMinusT = 1 - t;
+  return {
+    x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
+    y: oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y,
+  };
+}
+
+function addPoint(point, offset) {
+  return {
+    x: point.x + offset.x,
+    y: point.y + offset.y,
+  };
+}
+
+function adjustColor(color, amount, alpha = 1) {
+  if (!String(color).startsWith("#")) return color;
+  const value = color.slice(1);
+  const red = clamp(parseInt(value.slice(0, 2), 16) + amount, 0, 255);
+  const green = clamp(parseInt(value.slice(2, 4), 16) + amount, 0, 255);
+  const blue = clamp(parseInt(value.slice(4, 6), 16) + amount, 0, 255);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function drawLashShadow(targetCtx, points, eyeWidth, amount) {
+  if (amount <= 0) return;
+
+  targetCtx.save();
+  targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
+  targetCtx.filter = `blur(${Math.max(1.5, eyeWidth * 0.012)}px)`;
+  targetCtx.strokeStyle = "rgba(24, 18, 16, 0.55)";
+  targetCtx.globalAlpha = Math.min(0.32, amount * 0.32);
+  targetCtx.lineWidth = Math.max(3, eyeWidth * 0.032);
+  drawOffsetEyeStroke(targetCtx, points, Math.max(1, eyeWidth * 0.015));
+  targetCtx.restore();
+}
+
+function drawRootBlendLine(targetCtx, points, eyeWidth, amount) {
+  if (amount <= 0) return;
+
+  targetCtx.save();
+  targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
+  targetCtx.strokeStyle = "rgba(16, 12, 10, 0.86)";
+  targetCtx.globalAlpha = Math.min(0.72, amount * 0.72);
+  targetCtx.lineWidth = Math.max(1.1, eyeWidth * 0.012);
+  drawOffsetEyeStroke(targetCtx, points, -Math.max(1, eyeWidth * 0.004));
+  targetCtx.filter = `blur(${Math.max(0.5, eyeWidth * 0.003)}px)`;
+  targetCtx.globalAlpha = Math.min(0.36, amount * 0.36);
+  targetCtx.lineWidth = Math.max(2.2, eyeWidth * 0.02);
+  drawOffsetEyeStroke(targetCtx, points, -Math.max(1, eyeWidth * 0.004));
   targetCtx.restore();
 }
 
@@ -1191,6 +1689,28 @@ function lerpPoint(a, b, t) {
     x: a.x + (b.x - a.x) * t,
     y: a.y + (b.y - a.y) * t,
   };
+}
+
+function lerpNumber(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function deterministicUnit(seed, index, salt) {
+  let hash = 2166136261;
+  const input = `${seed}:${index}:${salt}`;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10000) / 10000;
+}
+
+function deterministicJitter(seed, index, salt) {
+  return deterministicUnit(seed, index, salt) * 2 - 1;
 }
 
 function normalize(vector) {

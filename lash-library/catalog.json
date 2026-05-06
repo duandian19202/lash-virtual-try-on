@@ -1,0 +1,478 @@
+{
+  "version": "1.0.0",
+  "brand": "Lash Studio",
+  "description": "Manufacturer lash product library used by the virtual try-on site.",
+  "products": [
+    {
+      "id": "natural-soft-black",
+      "sku": "LS-B-0810-005-BK",
+      "series": "Natural Line",
+      "category": "natural",
+      "nameZh": "日常裸感",
+      "nameEn": "Bare Natural",
+      "color": "#15110f",
+      "colorName": "黑",
+      "lengthMm": "8-10mm",
+      "curl": "B",
+      "thicknessMm": "0.05",
+      "material": "PBT",
+      "tags": ["自然", "轻盈", "通勤"],
+      "asset": "assets/LS-B-0810-005-BK.png",
+      "spikes": 22,
+      "render": {
+        "length": 0.46,
+        "curve": 0.2,
+        "thickness": 1.2,
+        "fan": 0.88
+      }
+    },
+    {
+      "id": "commute-mid-black",
+      "sku": "LS-C-0911-007-MBK",
+      "series": "Daily Line",
+      "category": "daily",
+      "nameZh": "通勤自然",
+      "nameEn": "Daily Soft",
+      "color": "#0b0a09",
+      "colorName": "中黑",
+      "lengthMm": "9-11mm",
+      "curl": "C",
+      "thicknessMm": "0.07",
+      "material": "PBT",
+      "tags": ["日常", "自然", "轻浓密"],
+      "asset": "assets/LS-C-0911-007-MBK.png",
+      "spikes": 24,
+      "render": {
+        "length": 0.5,
+        "curve": 0.32,
+        "thickness": 1.28,
+        "fan": 0.95
+      }
+    },
+    {
+      "id": "cat-deep-black",
+      "sku": "LS-C-1013-010-DBK",
+      "series": "Cat Eye",
+      "category": "cat-eye",
+      "nameZh": "小猫眼",
+      "nameEn": "Soft Cat Eye",
+      "color": "#0d0b0a",
+      "colorName": "深黑",
+      "lengthMm": "10-13mm",
+      "curl": "C",
+      "thicknessMm": "0.10",
+      "material": "PBT",
+      "tags": ["猫眼", "眼尾拉长", "日常"],
+      "asset": "assets/LS-C-1013-010-DBK.png",
+      "spikes": 25,
+      "render": {
+        "length": 0.54,
+        "curve": 0.36,
+        "thickness": 1.35,
+        "fan": 1.15
+      }
+    },
+    {
+      "id": "doll-deep-black",
+      "sku": "LS-D-1012-012-DBK",
+      "series": "Doll Eye",
+      "category": "doll",
+      "nameZh": "甜娃娃",
+      "nameEn": "Sweet Doll",
+      "color": "#11100f",
+      "colorName": "深黑",
+      "lengthMm": "10-12mm",
+      "curl": "D",
+      "thicknessMm": "0.12",
+      "material": "PBT",
+      "tags": ["娃娃眼", "放大眼型", "甜美"],
+      "asset": "assets/LS-D-1012-012-DBK.png",
+      "spikes": 28,
+      "render": {
+        "length": 0.6,
+        "curve": 0.48,
+        "thickness": 1.45,
+        "fan": 0.98
+      }
+    },
+    {
+      "id": "volume-ink",
+      "sku": "LS-D-1114-015-DBK",
+      "series": "Volume",
+      "category": "volume",
+      "nameZh": "浓密黑曜",
+      "nameEn": "Ink Volume",
+      "color": "#090807",
+      "colorName": "深黑",
+      "lengthMm": "11-14mm",
+      "curl": "D",
+      "thicknessMm": "0.15",
+      "material": "PBT",
+      "tags": ["浓密", "舞台", "强存在感"],
+      "asset": "assets/LS-D-1114-015-DBK.png",
+      "spikes": 34,
+      "render": {
+        "length": 0.66,
+        "curve": 0.58,
+        "thickness": 1.7,
+        "fan": 1.05
+      }
+    },
+    {
+      "id": "brown-air",
+      "sku": "LS-C-0811-006-BR",
+      "series": "Soft Brown",
+      "category": "color",
+      "nameZh": "棕色空气感",
+      "nameEn": "Airy Brown",
+      "color": "#4b3124",
+      "colorName": "棕色",
+      "lengthMm": "8-11mm",
+      "curl": "C",
+      "thicknessMm": "0.06",
+      "material": "PBT",
+      "tags": ["棕色", "柔和", "浅妆"],
+      "asset": "assets/LS-C-0811-006-BR.png",
+      "spikes": 26,
+      "render": {
+        "length": 0.5,
+        "curve": 0.34,
+        "thickness": 1.18,
+        "fan": 0.9
+      }
+    },
+    {
+      "id": "gray-mist",
+      "sku": "LS-B-0912-007-GY",
+      "series": "Mist Color",
+      "category": "color",
+      "nameZh": "灰雾柔焦",
+      "nameEn": "Mist Gray",
+      "color": "#3b3f42",
+      "colorName": "灰色",
+      "lengthMm": "9-12mm",
+      "curl": "B",
+      "thicknessMm": "0.07",
+      "material": "PBT",
+      "tags": ["灰色", "柔焦", "低饱和"],
+      "asset": "assets/LS-B-0912-007-GY.png",
+      "spikes": 25,
+      "render": {
+        "length": 0.52,
+        "curve": 0.28,
+        "thickness": 1.16,
+        "fan": 0.9
+      }
+    },
+    {
+      "id": "wispy-black",
+      "sku": "LS-L-0914-012-DBK",
+      "series": "Wispy",
+      "category": "wispy",
+      "nameZh": "漫画束感",
+      "nameEn": "Anime Wispy",
+      "color": "#080706",
+      "colorName": "深黑",
+      "lengthMm": "9-14mm",
+      "curl": "L",
+      "thicknessMm": "0.12",
+      "material": "PBT",
+      "tags": ["漫画", "束感", "网红款"],
+      "asset": "assets/LS-L-0914-012-DBK.png",
+      "spikes": 18,
+      "render": {
+        "length": 0.72,
+        "curve": 0.62,
+        "thickness": 1.55,
+        "fan": 1.22
+      }
+    },
+    {
+      "id": "wine-accent",
+      "sku": "LS-C-1013-010-WN",
+      "series": "Color Accent",
+      "category": "color",
+      "nameZh": "酒红点缀",
+      "nameEn": "Wine Accent",
+      "color": "#5b1824",
+      "colorName": "酒红",
+      "lengthMm": "10-13mm",
+      "curl": "C",
+      "thicknessMm": "0.10",
+      "material": "PBT",
+      "tags": ["彩色", "酒红", "点缀"],
+      "asset": "assets/LS-C-1013-010-WN.png",
+      "spikes": 27,
+      "render": {
+        "length": 0.58,
+        "curve": 0.42,
+        "thickness": 1.32,
+        "fan": 1.08
+      }
+    },
+    {
+      "id": "navy-accent",
+      "sku": "LS-D-1012-010-NV",
+      "series": "Color Accent",
+      "category": "color",
+      "nameZh": "蓝黑微光",
+      "nameEn": "Navy Black",
+      "color": "#111f32",
+      "colorName": "蓝黑",
+      "lengthMm": "10-12mm",
+      "curl": "D",
+      "thicknessMm": "0.10",
+      "material": "PBT",
+      "tags": ["彩色", "蓝黑", "微光"],
+      "asset": "assets/LS-D-1012-010-NV.png",
+      "spikes": 29,
+      "render": {
+        "length": 0.57,
+        "curve": 0.52,
+        "thickness": 1.34,
+        "fan": 1.02
+      }
+    },
+    {
+      "id": "test-natural-09011-c007-softblack",
+      "sku": "TEST-C-0911-007-SBK",
+      "series": "Test Natural",
+      "category": "natural",
+      "nameZh": "测试自然通勤",
+      "nameEn": "Test Natural Daily",
+      "color": "#12100f",
+      "colorName": "中黑",
+      "lengthMm": "9-11mm",
+      "curl": "C",
+      "thicknessMm": "0.07",
+      "material": "PBT",
+      "tags": ["测试", "自然", "通勤", "轻密度"],
+      "asset": "assets/TEST-C-0911-007-SBK.png",
+      "fiber": {
+        "thicknessMm": 0.07,
+        "finish": "semi-matte",
+        "tipShape": "tapered",
+        "rootColorDepth": 0.72
+      },
+      "curlProfile": {
+        "grade": "C",
+        "curveStrength": 0.34,
+        "liftAngleDeg": 28
+      },
+      "layout": {
+        "style": "natural-gradient",
+        "segments": [
+          { "zone": "inner", "lengthMm": 8, "density": 0.62 },
+          { "zone": "mid-inner", "lengthMm": 9, "density": 0.82 },
+          { "zone": "center", "lengthMm": 10, "density": 0.92 },
+          { "zone": "mid-outer", "lengthMm": 11, "density": 0.88 },
+          { "zone": "outer", "lengthMm": 10, "density": 0.7 }
+        ]
+      },
+      "spikes": 36,
+      "render": {
+        "length": 0.5,
+        "curve": 0.34,
+        "thickness": 1.22,
+        "fan": 0.92,
+        "rootBand": 0.42,
+        "randomness": 0.16,
+        "opacity": 0.9
+      }
+    },
+    {
+      "id": "test-cat-1013-c010-deepblack",
+      "sku": "TEST-C-1013-010-DBK",
+      "series": "Test Cat Eye",
+      "category": "cat-eye",
+      "nameZh": "测试眼尾拉长",
+      "nameEn": "Test Outer Cat Eye",
+      "color": "#080706",
+      "colorName": "深黑",
+      "lengthMm": "10-13mm",
+      "curl": "C",
+      "thicknessMm": "0.10",
+      "material": "PBT",
+      "tags": ["测试", "猫眼", "眼尾递增", "拉长"],
+      "asset": "assets/TEST-C-1013-010-DBK.png",
+      "fiber": {
+        "thicknessMm": 0.1,
+        "finish": "satin",
+        "tipShape": "tapered",
+        "rootColorDepth": 0.86
+      },
+      "curlProfile": {
+        "grade": "C",
+        "curveStrength": 0.4,
+        "liftAngleDeg": 32
+      },
+      "layout": {
+        "style": "outer-longer",
+        "segments": [
+          { "zone": "inner", "lengthMm": 8, "density": 0.68 },
+          { "zone": "mid-inner", "lengthMm": 9, "density": 0.86 },
+          { "zone": "center", "lengthMm": 10, "density": 0.98 },
+          { "zone": "mid-outer", "lengthMm": 12, "density": 1.08 },
+          { "zone": "outer", "lengthMm": 13, "density": 1.12 }
+        ]
+      },
+      "spikes": 42,
+      "render": {
+        "length": 0.58,
+        "curve": 0.4,
+        "thickness": 1.38,
+        "fan": 1.18,
+        "rootBand": 0.58,
+        "randomness": 0.18,
+        "opacity": 0.93
+      }
+    },
+    {
+      "id": "test-doll-1012-d010-black",
+      "sku": "TEST-D-1012-010-BK",
+      "series": "Test Doll Eye",
+      "category": "doll",
+      "nameZh": "测试中间放大",
+      "nameEn": "Test Center Doll",
+      "color": "#10100f",
+      "colorName": "黑",
+      "lengthMm": "10-12mm",
+      "curl": "D",
+      "thicknessMm": "0.10",
+      "material": "PBT",
+      "tags": ["测试", "娃娃眼", "中间加长", "放大眼型"],
+      "asset": "assets/TEST-D-1012-010-BK.png",
+      "fiber": {
+        "thicknessMm": 0.1,
+        "finish": "semi-matte",
+        "tipShape": "tapered",
+        "rootColorDepth": 0.82
+      },
+      "curlProfile": {
+        "grade": "D",
+        "curveStrength": 0.52,
+        "liftAngleDeg": 40
+      },
+      "layout": {
+        "style": "center-longer",
+        "segments": [
+          { "zone": "inner", "lengthMm": 8, "density": 0.7 },
+          { "zone": "mid-inner", "lengthMm": 10, "density": 0.96 },
+          { "zone": "center", "lengthMm": 12, "density": 1.16 },
+          { "zone": "mid-outer", "lengthMm": 10, "density": 0.96 },
+          { "zone": "outer", "lengthMm": 9, "density": 0.74 }
+        ]
+      },
+      "spikes": 44,
+      "render": {
+        "length": 0.6,
+        "curve": 0.52,
+        "thickness": 1.36,
+        "fan": 0.98,
+        "rootBand": 0.52,
+        "randomness": 0.14,
+        "opacity": 0.92
+      }
+    },
+    {
+      "id": "test-wispy-0914-l012-deepblack",
+      "sku": "TEST-L-0914-012-DBK",
+      "series": "Test Wispy",
+      "category": "wispy",
+      "nameZh": "测试漫画束感",
+      "nameEn": "Test Anime Wispy",
+      "color": "#070605",
+      "colorName": "深黑",
+      "lengthMm": "9-14mm",
+      "curl": "L",
+      "thicknessMm": "0.12",
+      "material": "PBT",
+      "tags": ["测试", "漫画", "束感", "尖峰"],
+      "asset": "assets/TEST-L-0914-012-DBK.png",
+      "fiber": {
+        "thicknessMm": 0.12,
+        "finish": "satin",
+        "tipShape": "needle",
+        "rootColorDepth": 0.9
+      },
+      "curlProfile": {
+        "grade": "L",
+        "curveStrength": 0.64,
+        "liftAngleDeg": 46
+      },
+      "layout": {
+        "style": "spike-cluster",
+        "segments": [
+          { "zone": "inner", "lengthMm": 8, "density": 0.58 },
+          { "zone": "mid-inner", "lengthMm": 10, "density": 0.72 },
+          { "zone": "center", "lengthMm": 13, "density": 0.92 },
+          { "zone": "mid-outer", "lengthMm": 14, "density": 1 },
+          { "zone": "outer", "lengthMm": 12, "density": 0.78 }
+        ],
+        "clusters": [
+          { "position": 0.22, "strength": 0.72 },
+          { "position": 0.42, "strength": 0.9 },
+          { "position": 0.62, "strength": 1 },
+          { "position": 0.8, "strength": 0.84 }
+        ]
+      },
+      "spikes": 24,
+      "render": {
+        "length": 0.72,
+        "curve": 0.64,
+        "thickness": 1.58,
+        "fan": 1.22,
+        "rootBand": 0.62,
+        "randomness": 0.1,
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "test-volume-1115-d015-deepblack",
+      "sku": "TEST-D-1115-015-DBK",
+      "series": "Test Volume",
+      "category": "volume",
+      "nameZh": "测试浓密舞台",
+      "nameEn": "Test Full Volume",
+      "color": "#050403",
+      "colorName": "深黑",
+      "lengthMm": "11-15mm",
+      "curl": "D",
+      "thicknessMm": "0.15",
+      "material": "PBT",
+      "tags": ["测试", "浓密", "舞台", "强妆感"],
+      "asset": "assets/TEST-D-1115-015-DBK.png",
+      "fiber": {
+        "thicknessMm": 0.15,
+        "finish": "gloss",
+        "tipShape": "tapered",
+        "rootColorDepth": 1
+      },
+      "curlProfile": {
+        "grade": "D",
+        "curveStrength": 0.6,
+        "liftAngleDeg": 44
+      },
+      "layout": {
+        "style": "full-volume",
+        "segments": [
+          { "zone": "inner", "lengthMm": 9, "density": 0.96 },
+          { "zone": "mid-inner", "lengthMm": 11, "density": 1.18 },
+          { "zone": "center", "lengthMm": 13, "density": 1.35 },
+          { "zone": "mid-outer", "lengthMm": 15, "density": 1.42 },
+          { "zone": "outer", "lengthMm": 14, "density": 1.28 }
+        ]
+      },
+      "spikes": 58,
+      "render": {
+        "length": 0.76,
+        "curve": 0.6,
+        "thickness": 1.86,
+        "fan": 1.1,
+        "rootBand": 0.82,
+        "randomness": 0.2,
+        "opacity": 0.96
+      }
+    }
+  ]
+}

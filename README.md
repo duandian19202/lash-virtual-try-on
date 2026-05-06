@@ -38,10 +38,25 @@ http://127.0.0.1:5173/
 - `index.html`：页面结构
 - `styles.css`：界面布局和视觉样式
 - `app.js`：识别、试戴、素材库、交互逻辑
+- `lash-library/`：厂家睫毛产品仓库，包含产品 JSON、字段规范、素材目录和校验脚本
 - `models/face_landmarker.task`：本地人脸识别模型
 - `vendor/mediapipe/tasks-vision/`：本地 MediaPipe 依赖
 - `vendor/lucide/lucide.min.js`：本地图标库
 - `PROJECT_CHECKLIST.md`：项目功能和后续开发清单
+
+## 睫毛产品仓库
+
+厂家款式不再写死在页面逻辑里，网站会读取：
+
+```text
+lash-library/catalog.json
+```
+
+新增或修改 SKU 后，运行：
+
+```bash
+node lash-library/scripts/validate.mjs
+```
 
 ## 隐私说明
 

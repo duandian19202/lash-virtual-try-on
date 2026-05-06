@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lash Manufacturer Library",
+  "type": "object",
+  "required": ["version", "brand", "products"],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "sku",
+          "series",
+          "category",
+          "nameZh",
+          "color",
+          "colorName",
+          "lengthMm",
+          "curl",
+          "thicknessMm",
+          "asset",
+          "spikes",
+          "render"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "sku": { "type": "string" },
+          "series": { "type": "string" },
+          "category": { "type": "string" },
+          "nameZh": { "type": "string" },
+          "nameEn": { "type": "string" },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "colorName": { "type": "string" },
+          "lengthMm": { "type": "string" },
+          "curl": { "type": "string" },
+          "thicknessMm": { "type": "string" },
+          "material": { "type": "string" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "asset": { "type": "string" },
+          "spikes": {
+            "type": "number",
+            "minimum": 1
+          },
+          "render": {
+            "type": "object",
+            "required": ["length", "curve", "thickness", "fan"],
+            "properties": {
+              "length": { "type": "number" },
+              "curve": { "type": "number" },
+              "thickness": { "type": "number" },
+              "fan": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
