@@ -34,6 +34,15 @@ def lerp(a, b, t):
     return a + (b - a) * t
 
 
+def mix_rgba(a, b, t, alpha=None):
+    return (
+        lerp(a[0], b[0], t),
+        lerp(a[1], b[1], t),
+        lerp(a[2], b[2], t),
+        a[3] if alpha is None else alpha,
+    )
+
+
 def cubic(p0, p1, p2, p3, t):
     u = 1 - t
     return p0 * (u ** 3) + p1 * (3 * u * u * t) + p2 * (3 * u * t * t) + p3 * (t ** 3)
@@ -60,22 +69,25 @@ def taper_radius(config, t):
     return lerp(mid * 0.48, tip, local ** 2.25)
 
 
-def make_material(name, color, roughness, specular, anisotropic=0.4, bump_strength=0.0):
+def make_material(name, color, roughness, specular, anisotropic=0.4, bump_strength=0.0, alpha=1.0, coat_weight=0.16):
     material = bpy.data.materials.new(name)
+    color = (color[0], color[1], color[2], alpha)
     material.diffuse_color = color
     material.use_nodes = True
     nodes = material.node_tree.nodes
     nodes.clear()
     output = nodes.new(type="ShaderNodeOutputMaterial")
-    output.location = (280, 0)
+    output.location = (520, 0)
     bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
     bsdf.location = (0, 0)
     bsdf.inputs["Base Color"].default_value = color
     bsdf.inputs["Metallic"].default_value = 0
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Specular IOR Level"].default_value = specular
-    bsdf.inputs["Coat Weight"].default_value = 0.16
+    bsdf.inputs["Coat Weight"].default_value = coat_weight
     bsdf.inputs["Coat Roughness"].default_value = 0.44
+    if "Alpha" in bsdf.inputs:
+        bsdf.inputs["Alpha"].default_value = alpha
     if "Anisotropic" in bsdf.inputs:
         bsdf.inputs["Anisotropic"].default_value = anisotropic
     if bump_strength > 0:
@@ -90,11 +102,83 @@ def make_material(name, color, roughness, specular, anisotropic=0.4, bump_streng
         bump.inputs["Distance"].default_value = 0.018
         material.node_tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
         material.node_tree.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    material.node_tree.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    if alpha < 1:
+        transparent = nodes.new(type="ShaderNodeBsdfTransparent")
+        transparent.location = (0, -250)
+        mix_shader = nodes.new(type="ShaderNodeMixShader")
+        mix_shader.location = (260, 0)
+        mix_shader.inputs[0].default_value = 1 - alpha
+        material.node_tree.links.new(bsdf.outputs["BSDF"], mix_shader.inputs[1])
+        material.node_tree.links.new(transparent.outputs["BSDF"], mix_shader.inputs[2])
+        material.node_tree.links.new(mix_shader.outputs["Shader"], output.inputs["Surface"])
+        if hasattr(material, "blend_method"):
+            material.blend_method = "BLEND"
+        if hasattr(material, "surface_render_method"):
+            material.surface_render_method = "BLENDED"
+        if hasattr(material, "show_transparent_back"):
+            material.show_transparent_back = True
+    else:
+        material.node_tree.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
     return material
 
 
-def make_fiber_mesh(config, material):
+def make_fiber_materials(config):
+    color = config["color"]
+    material_config = config["material"]
+    base = hex_to_rgba(color["base"])
+    edge = hex_to_rgba(color.get("edge", color["base"]))
+    highlight = hex_to_rgba(color.get("highlight", color["base"]))
+    shaft_color = mix_rgba(base, highlight, material_config.get("highlightMix", 0.06), material_config.get("shaftAlpha", 0.97))
+    root_color = mix_rgba(edge, shaft_color, material_config.get("rootShaftMix", 0.72), material_config.get("rootAlpha", 0.98))
+    tip_color = mix_rgba(base, highlight, material_config.get("tipHighlightMix", 0.24), material_config.get("tipAlpha", 0.62))
+    roughness = material_config["roughness"]
+    specular = material_config["specular"]
+    anisotropic = material_config.get("anisotropic", 0.4)
+    return [
+        make_material(
+            "Soft Dark Root",
+            root_color,
+            min(0.84, roughness + 0.025),
+            specular * 0.9,
+            anisotropic,
+            material_config.get("rootBumpStrength", 0.006),
+            root_color[3],
+            material_config.get("rootCoatWeight", 0.08),
+        ),
+        make_material(
+            "Satin PBT Shaft",
+            shaft_color,
+            roughness,
+            specular,
+            anisotropic,
+            material_config.get("bumpStrength", 0.008),
+            shaft_color[3],
+            material_config.get("coatWeight", 0.16),
+        ),
+        make_material(
+            "Feathered Semi Transparent Tip",
+            tip_color,
+            min(0.92, roughness + 0.12),
+            specular * 0.86,
+            anisotropic,
+            material_config.get("tipBumpStrength", 0.002),
+            tip_color[3],
+            material_config.get("tipCoatWeight", 0.06),
+        ),
+    ]
+
+
+def material_index_for_q(q, geometry):
+    root_limit = geometry.get("rootSection", 0.045) + geometry.get("rootMaterialLength", 0.045)
+    tip_start = geometry.get("tipMaterialStart", 0.83)
+    if q < root_limit:
+        return 0
+    if q > tip_start:
+        return 2
+    return 1
+
+
+def make_fiber_mesh(config, materials):
     length = config["lengthMm"] * 0.095
     geometry = config["geometry"]
     p0 = Vector((0, -0.52, 0))
@@ -110,7 +194,12 @@ def make_fiber_mesh(config, material):
     sides = 24
     verts = []
     faces = []
+    material_indices = []
     previous_normal = Vector((1, 0, 0))
+    micro_amp = geometry.get("microBendAmplitude", 0.0)
+    micro_freq = geometry.get("microBendFrequency", 3.0)
+    micro_phase = geometry.get("microBendPhase", 0.0)
+    micro_depth = geometry.get("microDepthAmplitude", micro_amp * 0.42)
 
     for ring in range(rings):
         q = ring / (rings - 1)
@@ -126,6 +215,10 @@ def make_fiber_mesh(config, material):
             center = cubic(p0, p1, p2, p3, t)
             tangent = cubic_tangent(p0, p1, p2, p3, t)
             radius = taper_radius(config, t)
+        if micro_amp:
+            falloff = math.sin(q * math.pi) ** 1.4
+            center.x += math.sin(q * math.tau * micro_freq + micro_phase) * micro_amp * falloff
+            center.z += math.cos(q * math.tau * (micro_freq * 0.72) + micro_phase * 1.37) * micro_depth * falloff
         binormal = tangent.cross(previous_normal).normalized()
         if binormal.length == 0:
             binormal = Vector((0, 0, 1))
@@ -148,22 +241,28 @@ def make_fiber_mesh(config, material):
             c = (ring + 1) * sides + (side + 1) % sides
             d = (ring + 1) * sides + side
             faces.append((a, b, c, d))
+            material_indices.append(material_index_for_q((ring + 0.5) / (rings - 1), geometry))
     start_center = len(verts)
     verts.append(root_start)
     end_center = len(verts)
     verts.append(p3 + cubic_tangent(p0, p1, p2, p3, 1) * geometry.get("tipExtension", 0.028))
     for side in range(sides):
         faces.append((start_center, (side + 1) % sides, side))
+        material_indices.append(0)
         a = (rings - 1) * sides + side
         b = (rings - 1) * sides + (side + 1) % sides
         faces.append((end_center, a, b))
+        material_indices.append(2)
 
     mesh = bpy.data.meshes.new("single_fiber_mesh")
     mesh.from_pydata([tuple(v) for v in verts], [], faces)
     mesh.update()
     obj = bpy.data.objects.new("Tapered Single Fiber", mesh)
     bpy.context.collection.objects.link(obj)
-    obj.data.materials.append(material)
+    for material in materials:
+        obj.data.materials.append(material)
+    for polygon, material_index in zip(obj.data.polygons, material_indices):
+        polygon.material_index = material_index
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
     bpy.ops.object.shade_smooth()
@@ -270,15 +369,8 @@ def write_metadata(config, root, tip, output):
 
 def render(config):
     setup_scene(config)
-    fiber_mat = make_material(
-        "Deep Black PBT Satin",
-        hex_to_rgba(config["color"]["base"]),
-        config["material"]["roughness"],
-        config["material"]["specular"],
-        config["material"].get("anisotropic", 0.4),
-        0.009,
-    )
-    _, root, tip = make_fiber_mesh(config, fiber_mat)
+    fiber_materials = make_fiber_materials(config)
+    _, root, tip = make_fiber_mesh(config, fiber_materials)
 
     output = Path(config["render"]["output"])
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -304,7 +396,7 @@ def render(config):
 def main():
     args = parse_args()
     if args.config_dir:
-        config_paths = sorted(Path(args.config_dir).glob("*.json"))
+        config_paths = sorted(Path(args.config_dir).rglob("*.json"))
     else:
         config_paths = [Path(args.config)]
     for config_path in config_paths:

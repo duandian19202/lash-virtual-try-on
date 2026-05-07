@@ -1,0 +1,67 @@
+{
+  "fiberId": "C-010-007-BLK__fiber-04",
+  "name": "C翘 10mm 0.07 黑色单根",
+  "assetType": "single-fiber",
+  "lengthMm": 10.12,
+  "thicknessMm": 0.07,
+  "curl": "C",
+  "color": {
+    "name": "黑色",
+    "base": "#050504",
+    "edge": "#010101",
+    "highlight": "#33302a"
+  },
+  "material": {
+    "type": "PBT",
+    "finish": "satin",
+    "roughness": 0.73,
+    "specular": 0.12,
+    "anisotropic": 0.78,
+    "shaftAlpha": 0.968,
+    "rootAlpha": 0.965,
+    "tipAlpha": 0.56,
+    "highlightMix": 0.055,
+    "tipHighlightMix": 0.3,
+    "bumpStrength": 0.0075,
+    "rootBumpStrength": 0.002,
+    "tipBumpStrength": 0.001,
+    "rootCoatWeight": 0.06
+  },
+  "geometry": {
+    "rootRadius": 0.0067,
+    "midRadius": 0.00415,
+    "tipRadius": 4e-05,
+    "rootBulbRadius": 0.006968,
+    "glueCollarRadius": 0.005762,
+    "curveStrength": 0.69,
+    "rootStraightness": 0.165,
+    "tipHook": 0.155,
+    "twist": 0.105,
+    "rootLength": 0.0058,
+    "rootSection": 0.0135,
+    "rootStartScale": 0.1,
+    "rootMaterialLength": 0.0035,
+    "tipMaterialStart": 0.812,
+    "tipExtension": 0.036,
+    "microBendAmplitude": 0.0045,
+    "microBendFrequency": 3.6,
+    "microBendPhase": 3.8
+  },
+  "render": {
+    "widthPx": 1400,
+    "heightPx": 1400,
+    "rootAnchor": {
+      "x": 0.193641,
+      "y": 0.829427,
+      "pixelX": 271.1,
+      "pixelY": 1161.2
+    },
+    "tipAnchor": {
+      "x": 0.838223,
+      "y": 0.175892,
+      "pixelX": 1173.51,
+      "pixelY": 246.25
+    },
+    "orientation": "root-to-tip"
+  }
+}

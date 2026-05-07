@@ -17,6 +17,7 @@ const els = {
   eyeZoomCanvas: document.querySelector("#eyeZoomCanvas"),
   video: document.querySelector("#video"),
   photoInput: document.querySelector("#photoInput"),
+  uploadDrop: document.querySelector(".upload-drop"),
   customLashInput: document.querySelector("#customLashInput"),
   uploadMode: document.querySelector("#uploadMode"),
   cameraMode: document.querySelector("#cameraMode"),
@@ -39,6 +40,10 @@ const els = {
   thicknessRange: document.querySelector("#thicknessRange"),
   liftRange: document.querySelector("#liftRange"),
   concealRange: document.querySelector("#concealRange"),
+  spatialForwardRange: document.querySelector("#spatialForwardRange"),
+  spatialLiftRange: document.querySelector("#spatialLiftRange"),
+  rootForwardRange: document.querySelector("#rootForwardRange"),
+  depthRange: document.querySelector("#depthRange"),
   leftXRange: document.querySelector("#leftXRange"),
   leftYRange: document.querySelector("#leftYRange"),
   leftScaleRange: document.querySelector("#leftScaleRange"),
@@ -57,6 +62,10 @@ const els = {
   thicknessValue: document.querySelector("#thicknessValue"),
   liftValue: document.querySelector("#liftValue"),
   concealValue: document.querySelector("#concealValue"),
+  spatialForwardValue: document.querySelector("#spatialForwardValue"),
+  spatialLiftValue: document.querySelector("#spatialLiftValue"),
+  rootForwardValue: document.querySelector("#rootForwardValue"),
+  depthValue: document.querySelector("#depthValue"),
   leftXValue: document.querySelector("#leftXValue"),
   leftYValue: document.querySelector("#leftYValue"),
   leftScaleValue: document.querySelector("#leftScaleValue"),
@@ -85,6 +94,7 @@ const MOBILE_IMAGE_DETECTION_MAX_SIDE = 640;
 const MOBILE_RECOVERY_DETECTION_INTERVAL = 180;
 const MOBILE_RECOVERY_DETECTION_MAX_SIDE = 720;
 const MAX_FIBERS_PER_EYE = 72;
+const FIBER_PREVIEW_MAX_SIDE = 1400;
 
 const state = {
   mode: "upload",
@@ -101,14 +111,18 @@ const state = {
   showBefore: false,
   controls: {
     length: 1,
-    density: 1,
+    density: 1.2,
     curl: 1,
     thickness: 1,
     lift: 0,
     conceal: 1,
+    spatialForward: 1.8,
+    spatialLift: 0.82,
+    rootForward: 1.9,
+    depth: 1,
     concealSoftness: 1,
-    lashOpacity: 0.92,
-    rootBlend: 0.55,
+    lashOpacity: 1,
+    rootBlend: 0.38,
     shadow: 0.35,
     eyeAdjustments: {
       left: { x: 0, y: 0, scale: 1, rotate: 0 },
@@ -122,20 +136,23 @@ const state = {
     color: "all",
   },
   animationId: null,
+  redrawId: null,
   lastDetectionAt: 0,
   missCount: 0,
   cameraDetectionMode: "IMAGE",
 };
 
 async function init() {
+  bindEvents();
+  drawEmptyCanvas();
+  drawEmptyEyeCloseup("等待图片");
   await loadManufacturerLashLibrary();
   await loadCustomLashLibrary();
   renderFilterOptions();
   renderStyleCards();
   renderSelectedProduct();
   renderLibraryCards();
-  bindEvents();
-  drawEmptyCanvas();
+  redraw();
   initModel();
   if (window.lucide) {
     window.lucide.createIcons();
@@ -177,6 +194,8 @@ function normalizeManufacturerCatalog(catalog) {
     assetCandidates: getAssetCandidates(product),
     fiberAsset: getPrimaryFiberAssetPath(product),
     fiberAssetCandidates: getFiberAssetCandidates(product),
+    fiberParams: getPrimaryFiberParamsPath(product),
+    fiberParamsCandidates: getFiberParamsCandidates(product),
   }));
 }
 
@@ -230,19 +249,44 @@ function getFiberAssetCandidates(product) {
   ].filter(Boolean);
 }
 
+function getPrimaryFiberParamsPath(product) {
+  return getFiberParamsCandidates(product)[0] ?? null;
+}
+
+function getFiberParamsCandidates(product) {
+  const skuPath = product.sku ? `assets/${product.sku}/params.json` : null;
+  return [
+    product.assets?.params,
+    product.assets?.fiberParams,
+    product.fiber?.params,
+    product.fiber?.metadata,
+    skuPath,
+  ].filter(Boolean);
+}
+
 async function hydrateManufacturerAssets(styles) {
   return Promise.all(
     styles.map(async (style) => {
       const stripAsset = await loadFirstLibraryImage(style.assetCandidates);
-      const fiberAsset = await loadFirstLibraryImage(style.fiberAssetCandidates);
+      const fiberParams = await loadFirstLibraryJson(style.fiberParamsCandidates);
+      const fiberVariants = await loadFiberVariants(fiberParams?.path, fiberParams?.data);
+      const fiberAsset = fiberVariants[0]
+        ? { path: fiberVariants[0].path, image: fiberVariants[0].image }
+        : await loadFirstLibraryImage(style.fiberAssetCandidates);
+      const fallbackFiberImage =
+        fiberVariants[0] || !fiberAsset ? fiberAsset?.image : createPreviewDrawable(fiberAsset.image);
       return {
         ...style,
         asset: stripAsset?.path ?? style.asset,
         assetImage: stripAsset?.image ?? null,
         assetMetrics: stripAsset ? analyzeLashAsset(stripAsset.image) : null,
         fiberAsset: fiberAsset?.path ?? style.fiberAsset,
-        fiberImage: fiberAsset?.image ?? null,
-        fiberMetrics: fiberAsset ? analyzeLashAsset(fiberAsset.image) : null,
+        fiberImage: fallbackFiberImage ?? null,
+        fiberParams: fiberParams?.data ?? null,
+        fiberVariants,
+        fiberMetrics: fiberAsset
+          ? getFiberAssetMetrics(fiberAsset.image, fiberParams?.data)
+          : null,
         renderMode: fiberAsset ? "fiber" : stripAsset ? "asset" : "asset-missing",
       };
     }),
@@ -258,6 +302,63 @@ async function loadFirstLibraryImage(paths = []) {
       };
     } catch {
       // Try the next declared asset path.
+    }
+  }
+  return null;
+}
+
+async function loadFiberVariants(paramsPath, params) {
+  const variants = Array.isArray(params?.variants) ? params.variants : [];
+  if (!paramsPath || variants.length === 0) return [];
+
+  const loaded = await Promise.all(
+    variants.map(async (variant, index) => {
+      if (!variant.file) return null;
+      const assetPath = joinLibraryPath(getDirectoryPath(paramsPath), variant.file);
+      try {
+        const image = await loadImage(resolveLibraryAssetUrl(assetPath));
+        const previewImage = createPreviewDrawable(image);
+        return {
+          id: variant.id ?? `variant-${index + 1}`,
+          path: assetPath,
+          image: previewImage,
+          fullImage: image,
+          product: variant.product ?? null,
+          metrics: getFiberAssetMetrics(image, {
+            anchors: variant.anchors,
+          }),
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return loaded.filter(Boolean);
+}
+
+function getDirectoryPath(assetPath) {
+  const index = assetPath.lastIndexOf("/");
+  return index === -1 ? "" : assetPath.slice(0, index);
+}
+
+function joinLibraryPath(directory, file) {
+  if (/^(https?:|data:|blob:)/.test(file)) return file;
+  if (file.startsWith("assets/") || file.startsWith("3d/")) return file;
+  return `${directory}/${file}`.replace(/\/+/g, "/");
+}
+
+async function loadFirstLibraryJson(paths = []) {
+  for (const assetPath of paths.filter(Boolean)) {
+    try {
+      const response = await fetch(resolveLibraryAssetUrl(assetPath), { cache: "no-store" });
+      if (!response.ok) throw new Error(`Failed to load ${assetPath}`);
+      return {
+        path: assetPath,
+        data: await response.json(),
+      };
+    } catch {
+      // Try the next declared params path.
     }
   }
   return null;
@@ -309,6 +410,20 @@ async function refreshDetectionAfterModelReady() {
 }
 
 function bindEvents() {
+  els.uploadDrop.addEventListener("click", (event) => {
+    event.preventDefault();
+    els.photoInput.value = "";
+    els.photoInput.click();
+  });
+  els.uploadDrop.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    els.photoInput.value = "";
+    els.photoInput.click();
+  });
+  els.photoInput.addEventListener("click", () => {
+    els.photoInput.value = "";
+  });
   els.photoInput.addEventListener("change", handlePhotoUpload);
   els.customLashInput.addEventListener("change", handleCustomLashUpload);
   els.uploadMode.addEventListener("click", () => setMode("upload"));
@@ -321,6 +436,10 @@ function bindEvents() {
   els.thicknessRange.addEventListener("input", updateControls);
   els.liftRange.addEventListener("input", updateControls);
   els.concealRange.addEventListener("input", updateControls);
+  els.spatialForwardRange.addEventListener("input", updateControls);
+  els.spatialLiftRange.addEventListener("input", updateControls);
+  els.rootForwardRange.addEventListener("input", updateControls);
+  els.depthRange.addEventListener("input", updateControls);
   els.leftXRange?.addEventListener("input", updateControls);
   els.leftYRange?.addEventListener("input", updateControls);
   els.leftScaleRange?.addEventListener("input", updateControls);
@@ -341,11 +460,11 @@ function bindEvents() {
   els.toggleBefore.addEventListener("click", () => {
     state.showBefore = !state.showBefore;
     els.toggleBefore.classList.toggle("active", state.showBefore);
-    redraw();
+    requestRedraw();
   });
   els.resetBtn.addEventListener("click", resetAdjustments);
   els.downloadBtn.addEventListener("click", downloadPreview);
-  window.addEventListener("resize", redraw);
+  window.addEventListener("resize", requestRedraw);
 }
 
 function setMode(mode) {
@@ -487,7 +606,10 @@ function renderSelectedProduct() {
 }
 
 function getRenderModeLabel(style) {
-  if (style.fiberImage) return " · 单根排布";
+  if (style.fiberImage) {
+    const variantCount = style.fiberVariants?.length ?? 0;
+    return variantCount > 1 ? ` · 单根排布 · ${variantCount} 变体` : " · 单根排布";
+  }
   return style.assetImage ? " · 真实素材" : "";
 }
 
@@ -540,7 +662,7 @@ function drawImageLashSwatch(canvas, image) {
   const swatchCtx = canvas.getContext("2d");
   swatchCtx.clearRect(0, 0, canvas.width, canvas.height);
   const width = canvas.width * 0.86;
-  const height = Math.min(canvas.height * 0.78, width * (image.naturalHeight / image.naturalWidth));
+  const height = Math.min(canvas.height * 0.78, width * (getDrawableHeight(image) / getDrawableWidth(image)));
   swatchCtx.drawImage(image, (canvas.width - width) / 2, canvas.height - height - 4, width, height);
 }
 
@@ -570,12 +692,13 @@ function drawFiberLashSwatch(canvas, style) {
       shadow: 0,
     },
     false,
+    "start",
   );
 }
 
 function analyzeLashAsset(image) {
   const sampleWidth = 320;
-  const sampleHeight = Math.max(64, Math.round(sampleWidth * (image.naturalHeight / image.naturalWidth)));
+  const sampleHeight = Math.max(64, Math.round(sampleWidth * (getDrawableHeight(image) / getDrawableWidth(image))));
   const probe = document.createElement("canvas");
   probe.width = sampleWidth;
   probe.height = sampleHeight;
@@ -618,6 +741,25 @@ function analyzeLashAsset(image) {
   };
 }
 
+function getFiberAssetMetrics(image, params) {
+  const measured = analyzeLashAsset(image);
+  const rootAnchor = params?.anchors?.rootAnchor;
+  const tipAnchor = params?.anchors?.tipAnchor;
+  if (!rootAnchor || !tipAnchor) return measured;
+
+  return {
+    ...measured,
+    rootX: clamp(Number(rootAnchor.x ?? measured.rootX ?? 0.5), 0, 1),
+    rootY: clamp(Number(rootAnchor.y ?? measured.rootY ?? 0.82), 0, 1),
+    tipX: clamp(Number(tipAnchor.x ?? 0.5), 0, 1),
+    tipY: clamp(Number(tipAnchor.y ?? 0.12), 0, 1),
+    sourceAngle: Math.atan2(
+      Number(tipAnchor.y ?? 0.12) - Number(rootAnchor.y ?? 0.82),
+      Number(tipAnchor.x ?? 0.5) - Number(rootAnchor.x ?? 0.5),
+    ),
+  };
+}
+
 function updateControls() {
   state.controls.length = Number(els.lengthRange.value) / 100;
   state.controls.density = Number(els.densityRange.value) / 100;
@@ -625,6 +767,10 @@ function updateControls() {
   state.controls.thickness = Number(els.thicknessRange.value) / 100;
   state.controls.lift = Number(els.liftRange.value);
   state.controls.conceal = Number(els.concealRange.value) / 100;
+  state.controls.spatialForward = Number(els.spatialForwardRange.value) / 100;
+  state.controls.spatialLift = Number(els.spatialLiftRange.value) / 100;
+  state.controls.rootForward = Number(els.rootForwardRange.value) / 100;
+  state.controls.depth = Number(els.depthRange.value) / 100;
   state.controls.concealSoftness = Number(els.concealSoftnessRange.value) / 100;
   state.controls.lashOpacity = Number(els.lashOpacityRange.value) / 100;
   state.controls.rootBlend = Number(els.rootBlendRange.value) / 100;
@@ -647,6 +793,10 @@ function updateControls() {
   els.thicknessValue.value = `${els.thicknessRange.value}%`;
   els.liftValue.value = els.liftRange.value;
   els.concealValue.value = `${els.concealRange.value}%`;
+  els.spatialForwardValue.value = `${els.spatialForwardRange.value}%`;
+  els.spatialLiftValue.value = `${els.spatialLiftRange.value}%`;
+  els.rootForwardValue.value = `${els.rootForwardRange.value}%`;
+  els.depthValue.value = `${els.depthRange.value}%`;
   els.concealSoftnessValue.value = `${els.concealSoftnessRange.value}%`;
   els.lashOpacityValue.value = `${els.lashOpacityRange.value}%`;
   els.rootBlendValue.value = `${els.rootBlendRange.value}%`;
@@ -659,19 +809,23 @@ function updateControls() {
   if (els.rightYValue) els.rightYValue.value = els.rightYRange?.value ?? 0;
   if (els.rightScaleValue) els.rightScaleValue.value = `${els.rightScaleRange?.value ?? 100}%`;
   if (els.rightRotateValue) els.rightRotateValue.value = `${els.rightRotateRange?.value ?? 0}°`;
-  redraw();
+  requestRedraw();
 }
 
 function resetAdjustments() {
   els.lengthRange.value = 100;
-  els.densityRange.value = 100;
+  els.densityRange.value = 120;
   els.curlRange.value = 100;
   els.thicknessRange.value = 100;
   els.liftRange.value = 0;
   els.concealRange.value = 100;
+  els.spatialForwardRange.value = 180;
+  els.spatialLiftRange.value = 82;
+  els.rootForwardRange.value = 190;
+  els.depthRange.value = 100;
   els.concealSoftnessRange.value = 100;
-  els.lashOpacityRange.value = 92;
-  els.rootBlendRange.value = 55;
+  els.lashOpacityRange.value = 100;
+  els.rootBlendRange.value = 38;
   els.shadowRange.value = 35;
   if (els.leftXRange) els.leftXRange.value = 0;
   if (els.leftYRange) els.leftYRange.value = 0;
@@ -690,6 +844,7 @@ async function handlePhotoUpload(event) {
   const file = event.target.files?.[0];
   if (!file) return;
   stopCamera();
+  setStatus("正在读取图片");
   const image = new Image();
   image.decoding = "async";
   image.onload = async () => {
@@ -698,8 +853,17 @@ async function handlePhotoUpload(event) {
     fitCanvasToSource(image.naturalWidth, image.naturalHeight);
     els.emptyState.style.display = "none";
     els.downloadBtn.disabled = false;
-    await detectImage(image);
     redraw();
+    try {
+      await switchModelMode("IMAGE");
+      await detectImage(image);
+    } catch (error) {
+      state.lastLandmarks = null;
+      setStatus("识别未完成，已显示原图");
+      console.error(error);
+    }
+    redraw();
+    URL.revokeObjectURL(image.src);
   };
   image.src = URL.createObjectURL(file);
 }
@@ -802,6 +966,31 @@ function loadImage(src) {
     image.onerror = reject;
     image.src = src;
   });
+}
+
+function createPreviewDrawable(image, maxSide = FIBER_PREVIEW_MAX_SIDE) {
+  const width = getDrawableWidth(image);
+  const height = getDrawableHeight(image);
+  const scale = Math.min(1, maxSide / Math.max(width, height));
+  if (scale >= 1) return image;
+
+  const preview = document.createElement("canvas");
+  preview.width = Math.max(1, Math.round(width * scale));
+  preview.height = Math.max(1, Math.round(height * scale));
+  const previewCtx = preview.getContext("2d");
+  previewCtx.imageSmoothingEnabled = true;
+  previewCtx.imageSmoothingQuality = "high";
+  previewCtx.clearRect(0, 0, preview.width, preview.height);
+  previewCtx.drawImage(image, 0, 0, preview.width, preview.height);
+  return preview;
+}
+
+function getDrawableWidth(image) {
+  return image.naturalWidth || image.videoWidth || image.width || 1;
+}
+
+function getDrawableHeight(image) {
+  return image.naturalHeight || image.videoHeight || image.height || 1;
 }
 
 async function detectImage(image) {
@@ -1028,7 +1217,19 @@ function fitCanvasToSource(width, height) {
   els.canvas.height = Math.round(height * ratio);
 }
 
+function requestRedraw() {
+  if (state.redrawId) return;
+  state.redrawId = requestAnimationFrame(() => {
+    state.redrawId = null;
+    redraw();
+  });
+}
+
 function redraw() {
+  if (state.redrawId) {
+    cancelAnimationFrame(state.redrawId);
+    state.redrawId = null;
+  }
   if (!state.source) {
     drawEmptyCanvas();
     drawEmptyEyeCloseup("等待图片");
@@ -1076,8 +1277,22 @@ function redraw() {
       state.selectedStyle.assetMetrics,
     );
   } else if (state.selectedStyle.fiberImage) {
-    drawFiberLashSet(ctx, adjustedEyes.left, state.selectedStyle, state.controls, false);
-    drawFiberLashSet(ctx, adjustedEyes.right, state.selectedStyle, state.controls, true);
+    drawFiberLashSet(
+      ctx,
+      adjustedEyes.left,
+      state.selectedStyle,
+      state.controls,
+      false,
+      getInnerEyeSide(adjustedEyes.left, adjustedEyes.right),
+    );
+    drawFiberLashSet(
+      ctx,
+      adjustedEyes.right,
+      state.selectedStyle,
+      state.controls,
+      true,
+      getInnerEyeSide(adjustedEyes.right, adjustedEyes.left),
+    );
   } else if (state.selectedStyle.assetImage) {
     drawImageLashSet(
       ctx,
@@ -1179,6 +1394,18 @@ function getFocusEyeForCloseup(eyes) {
   if (!eyes?.left?.length) return eyes.right;
   if (!eyes?.right?.length) return eyes.left;
   return eyes.left;
+}
+
+function getInnerEyeSide(eye, oppositeEye) {
+  if (!eye?.length) return "start";
+
+  const centerX = getAverageX(eye);
+  const referenceX = oppositeEye?.length ? getAverageX(oppositeEye) : els.canvas.width / 2;
+  return centerX < referenceX ? "end" : "start";
+}
+
+function getAverageX(points) {
+  return points.reduce((sum, point) => sum + point.x, 0) / points.length;
 }
 
 function clampSquareCrop(x, y, size) {
@@ -1357,6 +1584,67 @@ function getLuma([red, green, blue]) {
   return red * 0.299 + green * 0.587 + blue * 0.114;
 }
 
+function sampleEyeLightProfile(targetCtx, points, eyeWidth) {
+  const samples = [];
+  const sampleRadius = Math.max(2, Math.round(eyeWidth * 0.018));
+  const yOffsets = [-eyeWidth * 0.18, eyeWidth * 0.04, eyeWidth * 0.12];
+  const canvas = targetCtx.canvas;
+
+  for (let index = 1; index < points.length - 1; index += 1) {
+    for (const offset of yOffsets) {
+      const x = Math.round(points[index].x);
+      const y = Math.round(points[index].y + offset);
+      if (
+        x - sampleRadius < 0 ||
+        y - sampleRadius < 0 ||
+        x + sampleRadius >= canvas.width ||
+        y + sampleRadius >= canvas.height
+      ) {
+        continue;
+      }
+
+      const { data } = targetCtx.getImageData(
+        x - sampleRadius,
+        y - sampleRadius,
+        sampleRadius * 2 + 1,
+        sampleRadius * 2 + 1,
+      );
+      for (let pixel = 0; pixel < data.length; pixel += 4) {
+        if (data[pixel + 3] < 32) continue;
+        const red = data[pixel];
+        const green = data[pixel + 1];
+        const blue = data[pixel + 2];
+        const luma = red * 0.299 + green * 0.587 + blue * 0.114;
+        if (luma > 35 && luma < 245) {
+          samples.push(luma);
+        }
+      }
+    }
+  }
+
+  if (samples.length < 8) {
+    return {
+      filter: "none",
+      opacityScale: 1,
+      shadowScale: 0,
+    };
+  }
+
+  samples.sort((a, b) => a - b);
+  const median = samples[Math.floor(samples.length * 0.5)];
+  const low = samples[Math.floor(samples.length * 0.25)];
+  const high = samples[Math.floor(samples.length * 0.75)];
+  const contrast = (high - low) / 255;
+  const brightness = clamp(0.62 + (median / 255) * 0.16, 0.64, 0.8);
+  const filterContrast = clamp(1.18 + contrast * 0.52, 1.2, 1.36);
+
+  return {
+    filter: "none",
+    opacityScale: clamp(0.86 + (median / 255) * 0.12 - contrast * 0.04, 0.82, 1),
+    shadowScale: 0,
+  };
+}
+
 function drawImageLashSet(targetCtx, points, image, controls, mirror, metrics = {}) {
   const ordered = [...points].sort((a, b) => a.x - b.x);
   const lifted = ordered.map((point) => ({ ...point, y: point.y + controls.lift }));
@@ -1366,7 +1654,7 @@ function drawImageLashSet(targetCtx, points, image, controls, mirror, metrics = 
   const eyeWidth = Math.hypot(end.x - start.x, end.y - start.y);
   const angle = Math.atan2(end.y - start.y, end.x - start.x);
   const renderWidth = eyeWidth * 1.45 * controls.length;
-  const aspect = image.naturalHeight / image.naturalWidth;
+  const aspect = getDrawableHeight(image) / getDrawableWidth(image);
   const renderHeight =
     renderWidth * aspect * (0.7 + controls.density * 0.18 + controls.curl * 0.12);
   const rootBlend = controls.rootBlend ?? 0.55;
@@ -1387,7 +1675,7 @@ function drawImageLashSet(targetCtx, points, image, controls, mirror, metrics = 
   drawRootBlendLine(targetCtx, lifted, eyeWidth, rootBlend);
 }
 
-function drawFiberLashSet(targetCtx, points, style, controls, mirror) {
+function drawFiberLashSet(targetCtx, points, style, controls, mirror, innerSide = "start") {
   const ordered = [...points].sort((a, b) => a.x - b.x);
   const lifted = ordered.map((point) => ({ ...point, y: point.y + controls.lift }));
   const start = lifted[0];
@@ -1397,78 +1685,364 @@ function drawFiberLashSet(targetCtx, points, style, controls, mirror) {
   const densityScale = getAverageSegmentDensity(style) * controls.density;
   const fiberCount = Math.min(
     MAX_FIBERS_PER_EYE,
-    Math.max(10, Math.round(baseCount * densityScale)),
+    Math.max(8, Math.round(baseCount * densityScale)),
   );
   const render = style.render ?? {};
   const randomness = Number(style.layout?.randomness ?? render.randomness ?? 0.16);
   const opacity = Math.min(1, Number(render.opacity ?? controls.lashOpacity ?? 0.92));
+  const lightProfile = sampleEyeLightProfile(targetCtx, lifted, eyeWidth);
 
-  drawLashShadow(targetCtx, lifted, eyeWidth, controls.shadow ?? 0.35);
+  const shadowAmount = (controls.shadow ?? 0.35) * lightProfile.shadowScale;
+  if (shadowAmount > 0.01) {
+    drawLashShadow(targetCtx, lifted, eyeWidth, shadowAmount);
+  }
+
+  const placements = [];
+  const layers = getLashLayers(style);
+  layers.forEach((layer, layerIndex) => {
+    if (Number(layer.countScale ?? 1) <= 0 || Number(layer.opacityScale ?? 1) <= 0) return;
+
+    const layerCount = Math.max(3, Math.round(fiberCount * Number(layer.countScale ?? 1)));
+    const folliclePositions = getLayerFolliclePositions(
+      style,
+      layer,
+      layerIndex,
+      layerCount,
+      randomness,
+    );
+    folliclePositions.forEach((productT, index) => {
+      const placementIndex = layerIndex * 1000 + index;
+      const t = innerSide === "end" ? 1 - productT : productT;
+      const innerProfile = getInnerCanthusProfile(style, productT);
+      if (innerProfile.hidden) return;
+
+      const profile = sampleLayoutProfile(style, productT);
+      const variant = getFiberVariant(style, placementIndex, productT);
+      const fiberImage = variant.image;
+      const fiberMetrics = variant.metrics;
+      const density = Math.max(0.1, Number(profile.density ?? 1) * innerProfile.densityScale);
+      const skipChance = Math.max(0, 0.5 - density);
+      if (skipChance > 0 && deterministicUnit(style.id, placementIndex, 2) < skipChance) {
+        return;
+      }
+
+      const base = pointAt(lifted, t);
+      const tangent = tangentAt(lifted, t);
+      const normal = normalize({ x: -tangent.y, y: tangent.x });
+      const outward = normal.y > 0 ? { x: -normal.x, y: -normal.y } : normal;
+      const productTangent =
+        innerSide === "end" ? { x: -tangent.x, y: -tangent.y } : tangent;
+      const profileLength = Number(profile.lengthMm || getLengthFromRange(style.lengthMm));
+      const cluster = getClusterBoost(style, productT);
+      const spatialCurl = getSpatialCurlProfile(style, productT, layer, controls);
+      const depthProfile = getLashDepthProfile(layer, spatialCurl, controls);
+      const depth = deterministicJitter(style.id, placementIndex, 9) + layerIndex * 0.18;
+      const fiberHeight =
+        eyeWidth *
+        0.184 *
+        (profileLength / 10) *
+        Number(layer.lengthScale ?? 1) *
+        innerProfile.lengthScale *
+        controls.length *
+        (0.68 + controls.curl * 0.34) *
+        (0.92 + cluster * 0.24) *
+        (0.94 + deterministicJitter(style.id, placementIndex, 3) * randomness * 0.36) *
+        (0.96 + depth * 0.05) *
+        depthProfile.heightScale;
+      const aspect = getDrawableWidth(fiberImage) / getDrawableHeight(fiberImage);
+      const fiberWidth =
+        fiberHeight *
+        aspect *
+        controls.thickness *
+        (0.86 + density * 0.16) *
+        (0.94 + deterministicJitter(style.id, placementIndex, 4) * randomness * 0.32) *
+        depthProfile.widthScale;
+      const angleDeg =
+        Number(profile.angleDeg ?? 0) +
+        getNaturalAngleFlow(style, productT, layer, placementIndex) +
+        (productT - 0.5) * Number(style.layout?.fanSpread ?? render.fan ?? 0.18) * 34 * Number(layer.spread ?? 1) +
+        deterministicJitter(style.id, placementIndex, 5) * randomness * 9;
+      const curlLift = eyeWidth * 0.012 * controls.curl * (profileLength / 10);
+      const baseOffset = {
+        x:
+          outward.x * (eyeWidth * 0.006 * deterministicJitter(style.id, placementIndex, 6)) +
+          productTangent.x *
+            eyeWidth *
+            spatialCurl.rootForward *
+            (0.72 + deterministicUnit(style.id, placementIndex, 16) * 0.36),
+        y:
+          outward.y * (curlLift + eyeWidth * Number(layer.lift ?? 0)) +
+          productTangent.y *
+            eyeWidth *
+            spatialCurl.rootForward *
+            (0.72 + deterministicUnit(style.id, placementIndex, 17) * 0.36) +
+          deterministicJitter(style.id, placementIndex, 7) * eyeWidth * 0.003 +
+          depth * eyeWidth * 0.0035,
+      };
+      const growthDirection = normalize({
+        x: outward.x * spatialCurl.liftWeight + productTangent.x * spatialCurl.forwardWeight,
+        y: outward.y * spatialCurl.liftWeight + productTangent.y * spatialCurl.forwardWeight,
+      });
+      const direction = rotateVector(growthDirection, (angleDeg * Math.PI) / 180);
+      const targetAngle = Math.atan2(direction.y, direction.x);
+      const rootY = clamp(Number(fiberMetrics.rootY ?? 0.86), 0.35, 0.96);
+      const rootX = clamp(Number(fiberMetrics.rootX ?? 0.5), 0.02, 0.98);
+      const sourceAngle = Number(fiberMetrics.sourceAngle ?? -Math.PI / 2);
+
+      placements.push({
+        image: fiberImage,
+        x: base.x + baseOffset.x,
+        y: base.y + baseOffset.y,
+        rootBaseX: base.x + baseOffset.x,
+        rootBaseY: base.y + baseOffset.y,
+        width: fiberWidth,
+        height: fiberHeight,
+        rotation: targetAngle - sourceAngle,
+        rootX,
+        rootY,
+        opacity:
+          opacity *
+          Number(layer.opacityScale ?? 1) *
+          depthProfile.opacityScale *
+          innerProfile.opacityScale *
+          lightProfile.opacityScale *
+          clamp(0.78 + density * 0.18 + deterministicJitter(style.id, placementIndex, 8) * 0.08, 0.58, 1),
+        shadow: (controls.shadow ?? 0.35) * lightProfile.shadowScale * Number(layer.opacityScale ?? 1),
+        filter: lightProfile.filter,
+        focusBlur: depthProfile.focusBlur,
+        depth,
+        density,
+        innerFade: innerProfile.opacityScale,
+      });
+    });
+  });
+
+  if ((controls.rootBlend ?? 0.38) > 0.45) {
+    drawFollicleRootShadows(targetCtx, placements, eyeWidth, controls, lightProfile);
+  }
 
   targetCtx.save();
   targetCtx.imageSmoothingEnabled = true;
   targetCtx.imageSmoothingQuality = "high";
+  placements
+    .sort((a, b) => a.depth - b.depth)
+    .forEach((placement) => drawSingleFiber(targetCtx, placement.image, placement));
+  targetCtx.restore();
 
-  for (let index = 0; index < fiberCount; index += 1) {
-    const rawT = fiberCount === 1 ? 0.5 : index / (fiberCount - 1);
-    const spacingJitter = deterministicJitter(style.id, index, 1) * randomness * 0.34;
-    const t = clamp(rawT + spacingJitter / Math.max(1, fiberCount), 0.018, 0.982);
-    const productT = mirror ? 1 - t : t;
+  drawCrispRootContactLine(targetCtx, lifted, eyeWidth, controls);
+}
+
+function getFiberVariant(style, index, position) {
+  const variants = style.fiberVariants?.length
+    ? style.fiberVariants
+    : [
+        {
+          image: style.fiberImage,
+          metrics: style.fiberMetrics ?? {},
+        },
+      ];
+  const variantIndex = Math.floor(
+    deterministicUnit(style.id, index, Math.round(position * 1000) + 31) * variants.length,
+  );
+  return variants[Math.min(variants.length - 1, variantIndex)];
+}
+
+function getLashLayers(style) {
+  const layers = style.layout?.layers;
+  if (Array.isArray(layers) && layers.length > 0) return layers;
+
+  return [
+    {
+      id: "main",
+      countScale: 1,
+      lengthScale: 1,
+      opacityScale: 1,
+      lift: 0,
+      spread: 1,
+    },
+  ];
+}
+
+function getLayerFolliclePositions(style, layer, layerIndex, layerCount, randomness) {
+  const layerStart = clamp(Number(layer.start ?? 0), 0, 0.96);
+  const layerEnd = clamp(Number(layer.end ?? 1), layerStart + 0.04, 1);
+  const tRange = layerEnd - layerStart;
+  if (layerCount <= 1) return [layerStart + tRange * 0.5];
+
+  const gapCount = layerCount - 1;
+  const gaps = Array.from({ length: gapCount }, (_, index) => {
+    const rawT = gapCount === 1 ? 0.5 : index / (gapCount - 1);
+    const productT = layerStart + rawT * tRange;
     const profile = sampleLayoutProfile(style, productT);
-    const density = Math.max(0.1, Number(profile.density ?? 1));
-    const skipChance = Math.max(0, 0.72 - density);
-    if (skipChance > 0 && deterministicUnit(style.id, index, 2) < skipChance) {
-      continue;
-    }
-
-    const base = pointAt(lifted, t);
-    const tangent = tangentAt(lifted, t);
-    const normal = normalize({ x: -tangent.y, y: tangent.x });
-    const outward = normal.y > 0 ? { x: -normal.x, y: -normal.y } : normal;
-    const profileLength = Number(profile.lengthMm || getLengthFromRange(style.lengthMm));
+    const innerProfile = getInnerCanthusProfile(style, productT);
+    const density = clamp(Number(profile.density ?? 1) * innerProfile.densityScale, 0, 1.25);
     const cluster = getClusterBoost(style, productT);
-    const fiberHeight =
-      eyeWidth *
-      0.22 *
-      (profileLength / 10) *
-      controls.length *
-      (0.88 + controls.curl * 0.18) *
-      (0.92 + cluster * 0.24) *
-      (0.94 + deterministicJitter(style.id, index, 3) * randomness * 0.42);
-    const aspect = style.fiberImage.naturalWidth / style.fiberImage.naturalHeight;
-    const fiberWidth =
-      fiberHeight *
-      aspect *
-      controls.thickness *
-      (0.92 + density * 0.08) *
-      (0.94 + deterministicJitter(style.id, index, 4) * randomness * 0.32);
-    const angleDeg =
-      Number(profile.angleDeg ?? 0) +
-      (productT - 0.5) * Number(style.layout?.fanSpread ?? render.fan ?? 0.18) * 34 +
-      deterministicJitter(style.id, index, 5) * randomness * 18;
-    const curlLift = eyeWidth * 0.012 * controls.curl * (profileLength / 10);
-    const baseOffset = {
-      x: outward.x * (eyeWidth * 0.006 * deterministicJitter(style.id, index, 6)),
-      y: outward.y * curlLift + deterministicJitter(style.id, index, 7) * eyeWidth * 0.003,
-    };
-    const direction = rotateVector(outward, (angleDeg * Math.PI) / 180);
-    const targetAngle = Math.atan2(direction.y, direction.x);
-    const rootY = clamp(Number(style.fiberMetrics?.rootY ?? 0.86), 0.35, 0.96);
+    const randomGap = 1 + deterministicJitter(style.id, layerIndex * 2000 + index, 41) * 0.58;
+    const densityGap = 1.2 - density * 0.36;
+    const clusterGap = 1 - cluster * 0.28;
+    const naturalPause =
+      deterministicUnit(style.id, layerIndex * 2000 + index, 42) < 0.12 ? 1.45 : 1;
+    return Math.max(0.28, randomGap * densityGap * clusterGap * naturalPause);
+  });
+  const totalGap = gaps.reduce((sum, gap) => sum + gap, 0) || 1;
+  const positions = [layerStart];
+  let distance = 0;
 
-    drawSingleFiber(targetCtx, style.fiberImage, {
-      x: base.x + baseOffset.x,
-      y: base.y + baseOffset.y,
-      width: fiberWidth,
-      height: fiberHeight,
-      rotation: targetAngle + Math.PI / 2,
-      rootY,
-      opacity: opacity * clamp(0.78 + density * 0.18 + deterministicJitter(style.id, index, 8) * 0.08, 0.5, 1),
-      shadow: controls.shadow ?? 0.35,
-    });
+  gaps.forEach((gap, index) => {
+    distance += gap;
+    const rawPosition = layerStart + (distance / totalGap) * tRange;
+    const jitter =
+      deterministicJitter(style.id, layerIndex * 2000 + index, 43) *
+      (tRange / layerCount) *
+      (0.45 + randomness);
+    positions.push(clamp(rawPosition + jitter, layerStart, layerEnd));
+  });
+
+  return positions
+    .map((position, index) => {
+      const edgeSoftness = smoothstep(0, 0.08, position) * (1 - smoothstep(0.96, 1, position));
+      const microOffset =
+        deterministicJitter(style.id, layerIndex * 2000 + index, 44) *
+        (tRange / layerCount) *
+        0.3 *
+        edgeSoftness;
+      return clamp(position + microOffset, layerStart, layerEnd);
+    })
+    .sort((a, b) => a - b);
+}
+
+function smoothstep(edge0, edge1, value) {
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function getInnerCanthusProfile(style, productT) {
+  const noLashEnd = clamp(Number(style.layout?.innerNoLashEnd ?? 0.12), 0, 0.32);
+  const fadeEnd = clamp(
+    Number(style.layout?.innerFadeEnd ?? noLashEnd + 0.16),
+    noLashEnd + 0.02,
+    0.48,
+  );
+  if (productT <= noLashEnd) {
+    return {
+      hidden: true,
+      densityScale: 0,
+      lengthScale: 0,
+      opacityScale: 0,
+    };
   }
 
+  const rawFade = clamp((productT - noLashEnd) / (fadeEnd - noLashEnd), 0, 1);
+  const easedFade = rawFade * rawFade * (3 - 2 * rawFade);
+  return {
+    hidden: false,
+    densityScale: 0.16 + easedFade * 0.84,
+    lengthScale: 0.52 + easedFade * 0.48,
+    opacityScale: 0.22 + easedFade * 0.78,
+  };
+}
+
+function getSpatialCurlProfile(style, productT, layer, controls) {
+  const config = style.layout?.spatialCurl ?? {};
+  const baseForward = Number(config.forwardWeight ?? 0.32);
+  const baseLift = Number(config.liftWeight ?? 0.9);
+  const rootForward = Number(config.rootForward ?? 0.018);
+  const controlForward = controls.spatialForward ?? 1;
+  const controlLift = controls.spatialLift ?? 1;
+  const controlRootForward = controls.rootForward ?? 1;
+  const layerForward = Number(layer.forwardWeight ?? 1);
+  const layerLift = Number(layer.liftWeight ?? 1);
+  const innerEase = smoothstep(0.14, 0.34, productT);
+  const outerEase = smoothstep(0.58, 1, productT);
+  const forwardBias = 1.26 - innerEase * 0.16 + outerEase * 0.32;
+  const liftBias = 0.7 + innerEase * 0.18 + outerEase * 0.08;
+
+  return {
+    forwardWeight: clamp(baseForward * forwardBias * layerForward * controlForward, 0.06, 1.45),
+    liftWeight: clamp(baseLift * liftBias * layerLift * controlLift, 0.22, 1.45),
+    rootForward: clamp(
+      rootForward * (0.7 + outerEase * 0.75) * layerForward * controlRootForward,
+      0,
+      0.11,
+    ),
+  };
+}
+
+function getNaturalAngleFlow(style, productT, layer, placementIndex) {
+  const flow = style.layout?.angleFlow ?? {};
+  const innerDeg = Number(flow.innerDeg ?? -8);
+  const centerDeg = Number(flow.centerDeg ?? -2);
+  const outerDeg = Number(flow.outerDeg ?? 12);
+  const microVariationDeg = Number(flow.microVariationDeg ?? 4);
+  const innerToCenter = smoothstep(0.24, 0.5, productT);
+  const centerToOuter = smoothstep(0.58, 0.96, productT);
+  const baseAngle = lerpNumber(
+    lerpNumber(innerDeg, centerDeg, innerToCenter),
+    outerDeg,
+    centerToOuter,
+  );
+  const layerAccent = layer.id === "outer-accent" ? 2.5 : 0;
+  const micro =
+    deterministicJitter(style.id, placementIndex, 61) *
+    microVariationDeg *
+    (0.55 + smoothstep(0.34, 0.92, productT) * 0.45);
+
+  return baseAngle + layerAccent + micro;
+}
+
+function getLashDepthProfile(layer, spatialCurl, controls) {
+  const depthAmount = controls.depth ?? 1;
+  const projection = Number(layer.projection ?? 1);
+  const forwardRatio =
+    spatialCurl.forwardWeight / Math.max(0.001, spatialCurl.forwardWeight + spatialCurl.liftWeight);
+  const projectedDepth = clamp(forwardRatio * projection * depthAmount, 0, 2.2);
+  const layerBlur = Number(layer.focusBlur ?? 0);
+
+  return {
+    heightScale: clamp(1 - projectedDepth * 0.13, 0.68, 1.04),
+    widthScale: clamp(1 + projectedDepth * 0.18, 0.92, 1.46),
+    opacityScale: clamp(Number(layer.depthOpacity ?? 1) * (1 + projectedDepth * 0.05), 0.45, 1.08),
+    focusBlur: clamp(layerBlur * depthAmount, 0, 1.2),
+  };
+}
+
+function drawFollicleRootShadows(targetCtx, placements, eyeWidth, controls, lightProfile) {
+  if (placements.length === 0) return;
+
+  const rootBlend = controls.rootBlend ?? 0.38;
+  const baseRadius = clamp(eyeWidth * 0.007, 0.7, 2.2);
+
+  targetCtx.save();
+  targetCtx.globalCompositeOperation = "multiply";
+  targetCtx.filter = `blur(${Math.max(0.35, eyeWidth * 0.0025)}px)`;
+
+  placements
+    .filter((placement) => placement.opacity > 0.16)
+    .forEach((placement, index) => {
+      const alpha =
+        clamp(0.035 + placement.density * 0.028 + rootBlend * 0.055, 0.025, 0.095) *
+        placement.innerFade *
+        lightProfile.opacityScale;
+      if (alpha <= 0.01) return;
+
+      const radius =
+        baseRadius *
+        clamp(0.75 + placement.density * 0.38 + deterministicJitter("root-shadow", index, 1) * 0.18, 0.65, 1.28);
+      targetCtx.beginPath();
+      targetCtx.fillStyle = `rgba(24, 14, 10, ${alpha.toFixed(3)})`;
+      targetCtx.ellipse(
+        placement.rootBaseX,
+        placement.rootBaseY + eyeWidth * 0.002,
+        radius * 1.28,
+        radius * 0.72,
+        placement.rotation,
+        0,
+        Math.PI * 2,
+      );
+      targetCtx.fill();
+    });
+
   targetCtx.restore();
-  drawRootBlendLine(targetCtx, lifted, eyeWidth, controls.rootBlend ?? 0.55);
 }
 
 function drawSingleFiber(targetCtx, image, options) {
@@ -1481,7 +2055,7 @@ function drawSingleFiber(targetCtx, image, options) {
     targetCtx.filter = "blur(1.2px)";
     targetCtx.drawImage(
       image,
-      -options.width / 2,
+      -options.width * options.rootX,
       -options.height * options.rootY,
       options.width,
       options.height,
@@ -1493,14 +2067,22 @@ function drawSingleFiber(targetCtx, image, options) {
   targetCtx.translate(options.x, options.y);
   targetCtx.rotate(options.rotation);
   targetCtx.globalAlpha = options.opacity;
+  targetCtx.filter = mergeCanvasFilters(options.filter, options.focusBlur);
   targetCtx.drawImage(
     image,
-    -options.width / 2,
+    -options.width * options.rootX,
     -options.height * options.rootY,
     options.width,
     options.height,
   );
   targetCtx.restore();
+}
+
+function mergeCanvasFilters(baseFilter, blurPx = 0) {
+  const filters = [];
+  if (baseFilter && baseFilter !== "none") filters.push(baseFilter);
+  if (blurPx > 0.01) filters.push(`blur(${blurPx.toFixed(2)}px)`);
+  return filters.length ? filters.join(" ") : "none";
 }
 
 function drawLashShadow(targetCtx, points, eyeWidth, amount) {
@@ -1524,13 +2106,49 @@ function drawRootBlendLine(targetCtx, points, eyeWidth, amount) {
   targetCtx.lineCap = "round";
   targetCtx.lineJoin = "round";
   targetCtx.strokeStyle = "rgba(16, 12, 10, 0.86)";
-  targetCtx.globalAlpha = Math.min(0.72, amount * 0.72);
-  targetCtx.lineWidth = Math.max(1.1, eyeWidth * 0.012);
+  targetCtx.globalAlpha = Math.min(0.36, amount * 0.42);
+  targetCtx.lineWidth = Math.max(0.65, eyeWidth * 0.0065);
   drawOffsetEyeStroke(targetCtx, points, -Math.max(1, eyeWidth * 0.004));
-  targetCtx.filter = `blur(${Math.max(0.5, eyeWidth * 0.003)}px)`;
-  targetCtx.globalAlpha = Math.min(0.36, amount * 0.36);
-  targetCtx.lineWidth = Math.max(2.2, eyeWidth * 0.02);
+  targetCtx.filter = `blur(${Math.max(0.45, eyeWidth * 0.004)}px)`;
+  targetCtx.globalAlpha = Math.min(0.2, amount * 0.22);
+  targetCtx.lineWidth = Math.max(1.4, eyeWidth * 0.012);
   drawOffsetEyeStroke(targetCtx, points, -Math.max(1, eyeWidth * 0.004));
+  targetCtx.restore();
+}
+
+function drawCrispRootContactLine(targetCtx, points, eyeWidth, controls) {
+  const amount = clamp((controls.rootBlend ?? 0.38) * 0.16, 0.035, 0.09);
+  if (amount <= 0) return;
+
+  targetCtx.save();
+  targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
+  targetCtx.filter = "none";
+  targetCtx.strokeStyle = "rgba(18, 12, 9, 0.82)";
+  targetCtx.globalAlpha = amount;
+  targetCtx.lineWidth = Math.max(0.42, eyeWidth * 0.0038);
+  drawOffsetEyeStroke(targetCtx, points, -Math.max(0.45, eyeWidth * 0.003));
+  targetCtx.restore();
+}
+
+function drawLidRootOcclusion(targetCtx, points, eyeWidth, controls, lightProfile) {
+  const softness = controls.concealSoftness ?? 1;
+  const skinColor = sampleSkinColor(points, eyeWidth);
+  const amount = clamp((controls.rootBlend ?? 0.38) * 0.34 + 0.05, 0.09, 0.24);
+
+  targetCtx.save();
+  targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
+  targetCtx.strokeStyle = skinColor;
+  targetCtx.globalAlpha = amount * lightProfile.opacityScale;
+  targetCtx.lineWidth = Math.max(0.9, eyeWidth * 0.009);
+  targetCtx.filter = `blur(${Math.max(0.65, eyeWidth * 0.0045 * softness)}px)`;
+  drawOffsetEyeStroke(targetCtx, points, -Math.max(0.5, eyeWidth * 0.005));
+
+  targetCtx.globalAlpha = amount * 0.32 * lightProfile.opacityScale;
+  targetCtx.lineWidth = Math.max(1.9, eyeWidth * 0.016);
+  targetCtx.filter = `blur(${Math.max(1, eyeWidth * 0.008 * softness)}px)`;
+  drawOffsetEyeStroke(targetCtx, points, -Math.max(1, eyeWidth * 0.012));
   targetCtx.restore();
 }
 

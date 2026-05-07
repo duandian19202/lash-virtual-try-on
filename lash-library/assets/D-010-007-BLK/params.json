@@ -1,0 +1,102 @@
+{
+  "sku": "D-010-007-BLK",
+  "assetType": "single-fiber",
+  "files": {
+    "fiber": "fiber.png",
+    "sourceRender": "../../3d/production/single-fibers/renders/D-010-007-BLK/main.png",
+    "sourceConfig": "../../3d/production/single-fibers/configs/D-010-007-BLK.json",
+    "sourceMetadata": "../../3d/production/single-fibers/renders/D-010-007-BLK/metadata.json"
+  },
+  "product": {
+    "name": "D翘 10mm 0.07 黑色单根",
+    "curl": "D",
+    "lengthMm": 10,
+    "thicknessMm": 0.07,
+    "color": {
+      "name": "黑色",
+      "base": "#050505",
+      "edge": "#000000",
+      "highlight": "#2b2b28"
+    },
+    "material": {
+      "type": "PBT",
+      "finish": "satin",
+      "roughness": 0.7,
+      "specular": 0.12,
+      "anisotropic": 0.74
+    }
+  },
+  "anchors": {
+    "widthPx": 1400,
+    "heightPx": 1400,
+    "rootAnchor": {
+      "x": 0.19116,
+      "y": 0.831737,
+      "pixelX": 267.62,
+      "pixelY": 1164.43
+    },
+    "tipAnchor": {
+      "x": 0.888072,
+      "y": 0.164938,
+      "pixelX": 1243.3,
+      "pixelY": 230.91
+    },
+    "orientation": "root-to-tip"
+  },
+  "variants": [
+    {
+      "id": "fiber",
+      "file": "fiber.png",
+      "isDefault": true,
+      "anchors": {
+        "widthPx": 1400,
+        "heightPx": 1400,
+        "rootAnchor": {
+          "x": 0.19116,
+          "y": 0.831737,
+          "pixelX": 267.62,
+          "pixelY": 1164.43
+        },
+        "tipAnchor": {
+          "x": 0.888072,
+          "y": 0.164938,
+          "pixelX": 1243.3,
+          "pixelY": 230.91
+        },
+        "orientation": "root-to-tip"
+      },
+      "product": {
+        "name": "D翘 10mm 0.07 黑色单根",
+        "curl": "D",
+        "lengthMm": 10,
+        "thicknessMm": 0.07,
+        "color": {
+          "name": "黑色",
+          "base": "#050505",
+          "edge": "#000000",
+          "highlight": "#2b2b28"
+        },
+        "material": {
+          "type": "PBT",
+          "finish": "satin",
+          "roughness": 0.7,
+          "specular": 0.12,
+          "anisotropic": 0.74
+        }
+      },
+      "source": {
+        "render": "../../3d/production/single-fibers/renders/D-010-007-BLK/main.png",
+        "config": "../../3d/production/single-fibers/configs/D-010-007-BLK.json",
+        "metadata": "../../3d/production/single-fibers/renders/D-010-007-BLK/metadata.json"
+      }
+    }
+  ],
+  "compositionDefaults": {
+    "rootFusion": "soft-mask",
+    "opacity": 0.92,
+    "scale": 1,
+    "shadow": 0.18,
+    "defaultDensity": "natural",
+    "placement": "website-dynamic"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "sku": "C-010-007-BLK",
+  "fiberId": "C-010-007-BLK__fiber-05",
+  "variantId": "fiber-05",
+  "variantSort": 5,
+  "name": "C翘 10mm 0.07 黑色单根",
+  "curl": "C",
+  "lengthMm": 9.88,
+  "thicknessMm": 0.07,
+  "color": {
+    "name": "黑色",
+    "base": "#060504",
+    "edge": "#010101",
+    "highlight": "#352f27"
+  },
+  "material": {
+    "type": "PBT",
+    "finish": "satin",
+    "roughness": 0.76,
+    "specular": 0.1,
+    "anisotropic": 0.7,
+    "shaftAlpha": 0.962,
+    "rootAlpha": 0.965,
+    "tipAlpha": 0.52,
+    "highlightMix": 0.075,
+    "tipHighlightMix": 0.32,
+    "bumpStrength": 0.008,
+    "rootBumpStrength": 0.002,
+    "tipBumpStrength": 0.001,
+    "rootCoatWeight": 0.06
+  },
+  "geometry": {
+    "rootRadius": 0.0062,
+    "midRadius": 0.00385,
+    "tipRadius": 0.00003,
+    "rootBulbRadius": 0.006448,
+    "glueCollarRadius": 0.005332,
+    "curveStrength": 0.6,
+    "rootStraightness": 0.19,
+    "tipHook": 0.118,
+    "twist": 0.085,
+    "rootLength": 0.005,
+    "rootSection": 0.0125,
+    "rootStartScale": 0.09,
+    "rootMaterialLength": 0.003,
+    "tipMaterialStart": 0.795,
+    "tipExtension": 0.04,
+    "microBendAmplitude": 0.005,
+    "microBendFrequency": 4,
+    "microBendPhase": 4.9
+  },
+  "render": {
+    "widthPx": 1400,
+    "heightPx": 1400,
+    "samples": 96,
+    "output": "lash-library/3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-05/main.png"
+  }
+}

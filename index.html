@@ -35,7 +35,7 @@
               </button>
             </div>
 
-            <label class="upload-drop" for="photoInput">
+            <label class="upload-drop" for="photoInput" role="button" tabindex="0">
               <i data-lucide="scan-face" aria-hidden="true"></i>
               <span>上传正面脸部特写</span>
               <small>JPG、PNG 或 WebP</small>
@@ -116,31 +116,31 @@
                 <span>长度</span>
                 <output id="lengthValue">100%</output>
               </label>
-              <input id="lengthRange" type="range" min="70" max="140" value="100" />
+              <input id="lengthRange" type="range" min="50" max="190" value="100" />
 
               <label>
                 <span>浓密度</span>
-                <output id="densityValue">100%</output>
+                <output id="densityValue">120%</output>
               </label>
-              <input id="densityRange" type="range" min="60" max="160" value="100" />
+              <input id="densityRange" type="range" min="30" max="230" value="120" />
 
               <label>
                 <span>翘度微调</span>
                 <output id="curlValue">100%</output>
               </label>
-              <input id="curlRange" type="range" min="70" max="145" value="100" />
+              <input id="curlRange" type="range" min="35" max="220" value="100" />
 
               <label>
                 <span>粗细微调</span>
                 <output id="thicknessValue">100%</output>
               </label>
-              <input id="thicknessRange" type="range" min="70" max="150" value="100" />
+              <input id="thicknessRange" type="range" min="45" max="220" value="100" />
 
               <label>
                 <span>贴合高度</span>
                 <output id="liftValue">0</output>
               </label>
-              <input id="liftRange" type="range" min="-28" max="28" value="0" />
+              <input id="liftRange" type="range" min="-45" max="45" value="0" />
 
               <label>
                 <span>原睫毛遮盖</span>
@@ -151,19 +151,48 @@
 
             <div class="control-group">
               <div class="group-head">
+                <span>空间生长</span>
+              </div>
+              <label>
+                <span>前伸空间</span>
+                <output id="spatialForwardValue">180%</output>
+              </label>
+              <input id="spatialForwardRange" type="range" min="40" max="320" value="180" />
+
+              <label>
+                <span>上翘抬升</span>
+                <output id="spatialLiftValue">82%</output>
+              </label>
+              <input id="spatialLiftRange" type="range" min="35" max="180" value="82" />
+
+              <label>
+                <span>根部前伸</span>
+                <output id="rootForwardValue">190%</output>
+              </label>
+              <input id="rootForwardRange" type="range" min="0" max="360" value="190" />
+
+              <label>
+                <span>层次景深</span>
+                <output id="depthValue">100%</output>
+              </label>
+              <input id="depthRange" type="range" min="0" max="240" value="100" />
+            </div>
+
+            <div class="control-group">
+              <div class="group-head">
                 <span>素材质感</span>
               </div>
               <label>
                 <span>睫毛透明度</span>
-                <output id="lashOpacityValue">92%</output>
+                <output id="lashOpacityValue">100%</output>
               </label>
-              <input id="lashOpacityRange" type="range" min="45" max="100" value="92" />
+              <input id="lashOpacityRange" type="range" min="45" max="100" value="100" />
 
               <label>
                 <span>根部融合</span>
-                <output id="rootBlendValue">55%</output>
+                <output id="rootBlendValue">38%</output>
               </label>
-              <input id="rootBlendRange" type="range" min="0" max="100" value="55" />
+              <input id="rootBlendRange" type="range" min="0" max="100" value="38" />
 
               <label>
                 <span>自然阴影</span>

@@ -211,6 +211,11 @@ h1 {
   cursor: pointer;
 }
 
+.upload-drop:focus-visible {
+  outline: 3px solid rgba(14, 124, 113, 0.28);
+  outline-offset: 3px;
+}
+
 .upload-drop svg {
   width: 34px;
   height: 34px;

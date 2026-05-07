@@ -1,0 +1,396 @@
+{
+  "sku": "C-010-007-BLK",
+  "assetType": "single-fiber",
+  "files": {
+    "fiber": "fiber.png",
+    "variantsDir": "variants",
+    "sourceRender": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-01/main.png",
+    "sourceConfig": "../../3d/production/single-fibers/configs/C-010-007-BLK/fiber-01.json",
+    "sourceMetadata": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-01/metadata.json"
+  },
+  "product": {
+    "name": "C翘 10mm 0.07 黑色单根",
+    "curl": "C",
+    "lengthMm": 10,
+    "thicknessMm": 0.07,
+    "color": {
+      "name": "黑色",
+      "base": "#050505",
+      "edge": "#010101",
+      "highlight": "#2c2b28"
+    },
+    "material": {
+      "type": "PBT",
+      "finish": "satin",
+      "roughness": 0.72,
+      "specular": 0.13,
+      "anisotropic": 0.76,
+      "shaftAlpha": 0.97,
+      "rootAlpha": 0.965,
+      "tipAlpha": 0.6,
+      "highlightMix": 0.05,
+      "tipHighlightMix": 0.24,
+      "bumpStrength": 0.007,
+      "rootBumpStrength": 0.002,
+      "tipBumpStrength": 0.001,
+      "rootCoatWeight": 0.06
+    }
+  },
+  "anchors": {
+    "widthPx": 1400,
+    "heightPx": 1400,
+    "rootAnchor": {
+      "x": 0.193558,
+      "y": 0.829569,
+      "pixelX": 270.98,
+      "pixelY": 1161.4
+    },
+    "tipAnchor": {
+      "x": 0.801471,
+      "y": 0.17763,
+      "pixelX": 1122.06,
+      "pixelY": 248.68
+    },
+    "orientation": "root-to-tip"
+  },
+  "variants": [
+    {
+      "id": "fiber-01",
+      "file": "variants/fiber-01.png",
+      "isDefault": true,
+      "anchors": {
+        "widthPx": 1400,
+        "heightPx": 1400,
+        "rootAnchor": {
+          "x": 0.193558,
+          "y": 0.829569,
+          "pixelX": 270.98,
+          "pixelY": 1161.4
+        },
+        "tipAnchor": {
+          "x": 0.801471,
+          "y": 0.17763,
+          "pixelX": 1122.06,
+          "pixelY": 248.68
+        },
+        "orientation": "root-to-tip"
+      },
+      "product": {
+        "name": "C翘 10mm 0.07 黑色单根",
+        "curl": "C",
+        "lengthMm": 10,
+        "thicknessMm": 0.07,
+        "color": {
+          "name": "黑色",
+          "base": "#050505",
+          "edge": "#010101",
+          "highlight": "#2c2b28"
+        },
+        "material": {
+          "type": "PBT",
+          "finish": "satin",
+          "roughness": 0.72,
+          "specular": 0.13,
+          "anisotropic": 0.76,
+          "shaftAlpha": 0.97,
+          "rootAlpha": 0.965,
+          "tipAlpha": 0.6,
+          "highlightMix": 0.05,
+          "tipHighlightMix": 0.24,
+          "bumpStrength": 0.007,
+          "rootBumpStrength": 0.002,
+          "tipBumpStrength": 0.001,
+          "rootCoatWeight": 0.06
+        }
+      },
+      "source": {
+        "render": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-01/main.png",
+        "config": "../../3d/production/single-fibers/configs/C-010-007-BLK/fiber-01.json",
+        "metadata": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-01/metadata.json"
+      }
+    },
+    {
+      "id": "fiber-02",
+      "file": "variants/fiber-02.png",
+      "isDefault": false,
+      "anchors": {
+        "widthPx": 1400,
+        "heightPx": 1400,
+        "rootAnchor": {
+          "x": 0.193877,
+          "y": 0.829314,
+          "pixelX": 271.43,
+          "pixelY": 1161.04
+        },
+        "tipAnchor": {
+          "x": 0.784914,
+          "y": 0.179767,
+          "pixelX": 1098.88,
+          "pixelY": 251.67
+        },
+        "orientation": "root-to-tip"
+      },
+      "product": {
+        "name": "C翘 10mm 0.07 黑色单根",
+        "curl": "C",
+        "lengthMm": 9.95,
+        "thicknessMm": 0.07,
+        "color": {
+          "name": "黑色",
+          "base": "#060605",
+          "edge": "#020202",
+          "highlight": "#302f2b"
+        },
+        "material": {
+          "type": "PBT",
+          "finish": "satin",
+          "roughness": 0.74,
+          "specular": 0.115,
+          "anisotropic": 0.72,
+          "shaftAlpha": 0.965,
+          "rootAlpha": 0.965,
+          "tipAlpha": 0.54,
+          "highlightMix": 0.06,
+          "tipHighlightMix": 0.28,
+          "bumpStrength": 0.008,
+          "rootBumpStrength": 0.002,
+          "tipBumpStrength": 0.001,
+          "rootCoatWeight": 0.06
+        }
+      },
+      "source": {
+        "render": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-02/main.png",
+        "config": "../../3d/production/single-fibers/configs/C-010-007-BLK/fiber-02.json",
+        "metadata": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-02/metadata.json"
+      }
+    },
+    {
+      "id": "fiber-03",
+      "file": "variants/fiber-03.png",
+      "isDefault": false,
+      "anchors": {
+        "widthPx": 1400,
+        "heightPx": 1400,
+        "rootAnchor": {
+          "x": 0.193259,
+          "y": 0.829843,
+          "pixelX": 270.56,
+          "pixelY": 1161.78
+        },
+        "tipAnchor": {
+          "x": 0.818899,
+          "y": 0.175051,
+          "pixelX": 1146.46,
+          "pixelY": 245.07
+        },
+        "orientation": "root-to-tip"
+      },
+      "product": {
+        "name": "C翘 10mm 0.07 黑色单根",
+        "curl": "C",
+        "lengthMm": 10.08,
+        "thicknessMm": 0.07,
+        "color": {
+          "name": "黑色",
+          "base": "#040404",
+          "edge": "#000000",
+          "highlight": "#292824"
+        },
+        "material": {
+          "type": "PBT",
+          "finish": "satin",
+          "roughness": 0.69,
+          "specular": 0.145,
+          "anisotropic": 0.8,
+          "shaftAlpha": 0.972,
+          "rootAlpha": 0.965,
+          "tipAlpha": 0.58,
+          "highlightMix": 0.04,
+          "tipHighlightMix": 0.2,
+          "bumpStrength": 0.006,
+          "rootBumpStrength": 0.002,
+          "tipBumpStrength": 0.001,
+          "rootCoatWeight": 0.06
+        }
+      },
+      "source": {
+        "render": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-03/main.png",
+        "config": "../../3d/production/single-fibers/configs/C-010-007-BLK/fiber-03.json",
+        "metadata": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-03/metadata.json"
+      }
+    },
+    {
+      "id": "fiber-04",
+      "file": "variants/fiber-04.png",
+      "isDefault": false,
+      "anchors": {
+        "widthPx": 1400,
+        "heightPx": 1400,
+        "rootAnchor": {
+          "x": 0.193641,
+          "y": 0.829427,
+          "pixelX": 271.1,
+          "pixelY": 1161.2
+        },
+        "tipAnchor": {
+          "x": 0.838223,
+          "y": 0.175892,
+          "pixelX": 1173.51,
+          "pixelY": 246.25
+        },
+        "orientation": "root-to-tip"
+      },
+      "product": {
+        "name": "C翘 10mm 0.07 黑色单根",
+        "curl": "C",
+        "lengthMm": 10.12,
+        "thicknessMm": 0.07,
+        "color": {
+          "name": "黑色",
+          "base": "#050504",
+          "edge": "#010101",
+          "highlight": "#33302a"
+        },
+        "material": {
+          "type": "PBT",
+          "finish": "satin",
+          "roughness": 0.73,
+          "specular": 0.12,
+          "anisotropic": 0.78,
+          "shaftAlpha": 0.968,
+          "rootAlpha": 0.965,
+          "tipAlpha": 0.56,
+          "highlightMix": 0.055,
+          "tipHighlightMix": 0.3,
+          "bumpStrength": 0.0075,
+          "rootBumpStrength": 0.002,
+          "tipBumpStrength": 0.001,
+          "rootCoatWeight": 0.06
+        }
+      },
+      "source": {
+        "render": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-04/main.png",
+        "config": "../../3d/production/single-fibers/configs/C-010-007-BLK/fiber-04.json",
+        "metadata": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-04/metadata.json"
+      }
+    },
+    {
+      "id": "fiber-05",
+      "file": "variants/fiber-05.png",
+      "isDefault": false,
+      "anchors": {
+        "widthPx": 1400,
+        "heightPx": 1400,
+        "rootAnchor": {
+          "x": 0.194127,
+          "y": 0.828997,
+          "pixelX": 271.78,
+          "pixelY": 1160.6
+        },
+        "tipAnchor": {
+          "x": 0.790816,
+          "y": 0.187252,
+          "pixelX": 1107.14,
+          "pixelY": 262.15
+        },
+        "orientation": "root-to-tip"
+      },
+      "product": {
+        "name": "C翘 10mm 0.07 黑色单根",
+        "curl": "C",
+        "lengthMm": 9.88,
+        "thicknessMm": 0.07,
+        "color": {
+          "name": "黑色",
+          "base": "#060504",
+          "edge": "#010101",
+          "highlight": "#352f27"
+        },
+        "material": {
+          "type": "PBT",
+          "finish": "satin",
+          "roughness": 0.76,
+          "specular": 0.1,
+          "anisotropic": 0.7,
+          "shaftAlpha": 0.962,
+          "rootAlpha": 0.965,
+          "tipAlpha": 0.52,
+          "highlightMix": 0.075,
+          "tipHighlightMix": 0.32,
+          "bumpStrength": 0.008,
+          "rootBumpStrength": 0.002,
+          "tipBumpStrength": 0.001,
+          "rootCoatWeight": 0.06
+        }
+      },
+      "source": {
+        "render": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-05/main.png",
+        "config": "../../3d/production/single-fibers/configs/C-010-007-BLK/fiber-05.json",
+        "metadata": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-05/metadata.json"
+      }
+    },
+    {
+      "id": "fiber-06",
+      "file": "variants/fiber-06.png",
+      "isDefault": false,
+      "anchors": {
+        "widthPx": 1400,
+        "heightPx": 1400,
+        "rootAnchor": {
+          "x": 0.193569,
+          "y": 0.829579,
+          "pixelX": 271,
+          "pixelY": 1161.41
+        },
+        "tipAnchor": {
+          "x": 0.788491,
+          "y": 0.163454,
+          "pixelX": 1103.89,
+          "pixelY": 228.84
+        },
+        "orientation": "root-to-tip"
+      },
+      "product": {
+        "name": "C翘 10mm 0.07 黑色单根",
+        "curl": "C",
+        "lengthMm": 10.02,
+        "thicknessMm": 0.07,
+        "color": {
+          "name": "黑色",
+          "base": "#050505",
+          "edge": "#020202",
+          "highlight": "#2f302c"
+        },
+        "material": {
+          "type": "PBT",
+          "finish": "satin",
+          "roughness": 0.71,
+          "specular": 0.135,
+          "anisotropic": 0.77,
+          "shaftAlpha": 0.97,
+          "rootAlpha": 0.965,
+          "tipAlpha": 0.57,
+          "highlightMix": 0.05,
+          "tipHighlightMix": 0.26,
+          "bumpStrength": 0.007,
+          "rootBumpStrength": 0.002,
+          "tipBumpStrength": 0.001,
+          "rootCoatWeight": 0.06
+        }
+      },
+      "source": {
+        "render": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-06/main.png",
+        "config": "../../3d/production/single-fibers/configs/C-010-007-BLK/fiber-06.json",
+        "metadata": "../../3d/production/single-fibers/renders/C-010-007-BLK/variants/fiber-06/metadata.json"
+      }
+    }
+  ],
+  "compositionDefaults": {
+    "rootFusion": "soft-mask",
+    "opacity": 0.92,
+    "scale": 1,
+    "shadow": 0.18,
+    "defaultDensity": "natural",
+    "placement": "website-dynamic"
+  }
+}
