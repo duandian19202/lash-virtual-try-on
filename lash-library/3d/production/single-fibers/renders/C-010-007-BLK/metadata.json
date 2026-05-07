@@ -1,0 +1,53 @@
+{
+  "fiberId": "C-010-007-BLK",
+  "name": "C翘 10mm 0.07 黑色单根",
+  "assetType": "single-fiber",
+  "lengthMm": 10,
+  "thicknessMm": 0.07,
+  "curl": "C",
+  "color": {
+    "name": "黑色",
+    "base": "#050505",
+    "edge": "#000000",
+    "highlight": "#2b2b28"
+  },
+  "material": {
+    "type": "PBT",
+    "finish": "satin",
+    "roughness": 0.7,
+    "specular": 0.12,
+    "anisotropic": 0.74
+  },
+  "geometry": {
+    "rootRadius": 0.01,
+    "midRadius": 0.0044,
+    "tipRadius": 8e-05,
+    "rootBulbRadius": 0.009,
+    "glueCollarRadius": 0.008,
+    "curveStrength": 0.62,
+    "rootStraightness": 0.18,
+    "tipHook": 0.12,
+    "twist": 0.11,
+    "rootLength": 0.01,
+    "rootSection": 0.02,
+    "rootStartScale": 0.38,
+    "tipExtension": 0.03
+  },
+  "render": {
+    "widthPx": 1400,
+    "heightPx": 1400,
+    "rootAnchor": {
+      "x": 0.191334,
+      "y": 0.831904,
+      "pixelX": 267.87,
+      "pixelY": 1164.67
+    },
+    "tipAnchor": {
+      "x": 0.801471,
+      "y": 0.17763,
+      "pixelX": 1122.06,
+      "pixelY": 248.68
+    },
+    "orientation": "root-to-tip"
+  }
+}

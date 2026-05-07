@@ -1,0 +1,47 @@
+{
+  "tryOnId": "EYE-REF-673-TOP-TAIL",
+  "name": "真实眼皮贴合测试 - 参考图上半原始眼",
+  "seed": 2026050602,
+  "backgroundImage": "/Users/a1-6/Documents/New project 5/lash-library/3d/experiments/try-on/backgrounds/EYE-REF-673-TOP-TAIL/background-top.png",
+  "backgroundSize": {
+    "widthPx": 1500,
+    "heightPx": 749
+  },
+  "targetPanel": "top-original-eye",
+  "lashLinePx": {
+    "start": [455, 318],
+    "mid": [790, 264],
+    "end": [1248, 354]
+  },
+  "segment": {
+    "fiberCount": 40,
+    "lengthScale": 0.0054,
+    "rootRadius": 0.00082,
+    "midRadius": 0.00034,
+    "tipRadius": 0.000012,
+    "tipExtension": 0.0048,
+    "rootLength": 0.0018,
+    "rootStartScale": 0.28,
+    "rootSection": 0.018,
+    "baseColor": "#080807",
+    "roughness": 0.72,
+    "specular": 0.1,
+    "anisotropic": 0.76
+  },
+  "layout": {
+    "rootNoisePx": 6,
+    "innerSkip": 0.06,
+    "outerDensityBias": 0.26,
+    "layers": [
+      { "name": "short-near", "count": 11, "z": 0.018, "lengthMin": 7.0, "lengthMax": 8.4, "outwardMin": 0.08, "outwardMax": 0.22, "liftPx": 88 },
+      { "name": "main", "count": 17, "z": 0.032, "lengthMin": 8.4, "lengthMax": 10.2, "outwardMin": 0.12, "outwardMax": 0.34, "liftPx": 104 },
+      { "name": "tail-long", "count": 12, "z": 0.046, "lengthMin": 9.8, "lengthMax": 11.8, "outwardMin": 0.26, "outwardMax": 0.52, "liftPx": 122 }
+    ]
+  },
+  "render": {
+    "widthPx": 1500,
+    "heightPx": 749,
+    "samples": 128,
+    "output": "lash-library/3d/experiments/try-on/renders/EYE-REF-673-TOP-TAIL/main-top.png"
+  }
+}

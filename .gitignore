@@ -2,3 +2,5 @@
 Thumbs.db
 *.log
 *.blend1
+__pycache__/
+*.pyc

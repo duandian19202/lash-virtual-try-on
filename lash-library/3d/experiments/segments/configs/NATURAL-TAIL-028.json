@@ -1,0 +1,43 @@
+{
+  "segmentId": "NATURAL-TAIL-028",
+  "name": "自然眼尾小段 28 根测试",
+  "seed": 20260506,
+  "fiberCount": 28,
+  "style": {
+    "type": "natural-tail",
+    "description": "真实参考校准：眼尾外扩、多层叠加、根部弱化、靠密度自然变黑"
+  },
+  "geometry": {
+    "rootRadius": 0.0058,
+    "midRadius": 0.0026,
+    "tipRadius": 0.00004,
+    "rootLength": 0.004,
+    "rootSection": 0.018,
+    "rootStartScale": 0.18,
+    "tipExtension": 0.032,
+    "curveStrength": 0.86,
+    "twist": 0.1
+  },
+  "material": {
+    "base": "#050505",
+    "roughness": 0.7,
+    "specular": 0.12,
+    "anisotropic": 0.74,
+    "bumpStrength": 0.007
+  },
+  "layout": {
+    "width": 0.72,
+    "rootCurve": 0.045,
+    "layers": [
+      { "name": "near-root-short", "count": 8, "z": -0.018, "lengthMin": 6.6, "lengthMax": 8.1, "leanMin": 0.09, "leanMax": 0.22, "angleJitter": 0.045 },
+      { "name": "main-middle", "count": 12, "z": 0.0, "lengthMin": 7.8, "lengthMax": 9.8, "leanMin": 0.16, "leanMax": 0.34, "angleJitter": 0.065 },
+      { "name": "outer-long", "count": 8, "z": 0.022, "lengthMin": 9.1, "lengthMax": 11.2, "leanMin": 0.3, "leanMax": 0.52, "angleJitter": 0.085 }
+    ]
+  },
+  "render": {
+    "widthPx": 1600,
+    "heightPx": 1100,
+    "samples": 144,
+    "output": "lash-library/3d/experiments/segments/renders/NATURAL-TAIL-028/main.png"
+  }
+}

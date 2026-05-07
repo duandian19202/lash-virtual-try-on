@@ -84,7 +84,7 @@ const MOBILE_IMAGE_DETECTION_INTERVAL = 110;
 const MOBILE_IMAGE_DETECTION_MAX_SIDE = 640;
 const MOBILE_RECOVERY_DETECTION_INTERVAL = 180;
 const MOBILE_RECOVERY_DETECTION_MAX_SIDE = 720;
-const MAX_RENDER_FIBERS_PER_EYE = 64;
+const MAX_FIBERS_PER_EYE = 72;
 
 const state = {
   mode: "upload",
@@ -151,8 +151,12 @@ async function loadManufacturerLashLibrary() {
       throw new Error(`Failed to load ${MANUFACTURER_LIBRARY_URL}: ${response.status}`);
     }
     const catalog = await response.json();
-    lashStyles = await hydrateManufacturerAssets(normalizeManufacturerCatalog(catalog));
-    state.selectedStyle = lashStyles[0] ?? null;
+    const hydratedStyles = await hydrateManufacturerAssets(normalizeManufacturerCatalog(catalog));
+    lashStyles = hydratedStyles.filter(hasRealManufacturerAsset);
+    state.selectedStyle = getDefaultManufacturerStyle(lashStyles);
+    if (lashStyles.length === 0) {
+      setStatus("真实睫毛素材库暂无可用素材");
+    }
   } catch (error) {
     lashStyles = [];
     state.selectedStyle = null;
@@ -169,34 +173,94 @@ function normalizeManufacturerCatalog(catalog) {
     ...product,
     name: product.name ?? product.nameZh,
     curlGrade: product.curlGrade ?? product.curl,
-    spikes: Number(product.spikes ?? 24),
-    length: Number(product.render?.length ?? product.length ?? 0.52),
-    curve: Number(product.render?.curve ?? product.curve ?? 0.34),
-    thickness: Number(product.render?.thickness ?? product.thickness ?? 1.25),
-    fan: Number(product.render?.fan ?? product.fan ?? 1),
+    asset: getPrimaryAssetPath(product),
+    assetCandidates: getAssetCandidates(product),
+    fiberAsset: getPrimaryFiberAssetPath(product),
+    fiberAssetCandidates: getFiberAssetCandidates(product),
   }));
+}
+
+function getDefaultManufacturerStyle(styles) {
+  return styles[0] ?? null;
+}
+
+function hasRealManufacturerAsset(style) {
+  return Boolean(style.fiberImage || style.assetImage);
+}
+
+function getPrimaryAssetPath(product) {
+  return (
+    product.asset ??
+    product.assets?.main ??
+    product.assets?.single ??
+    product.assets?.right ??
+    product.assets?.left ??
+    null
+  );
+}
+
+function getAssetCandidates(product) {
+  const skuMainPath = product.sku ? `assets/${product.sku}/main.png` : null;
+  const skuSinglePath = product.sku ? `assets/${product.sku}/single.png` : null;
+  return [
+    product.asset,
+    product.assets?.main,
+    product.assets?.single,
+    product.assets?.right,
+    product.assets?.left,
+    skuMainPath,
+    skuSinglePath,
+  ].filter(Boolean);
+}
+
+function getPrimaryFiberAssetPath(product) {
+  return getFiberAssetCandidates(product)[0] ?? null;
+}
+
+function getFiberAssetCandidates(product) {
+  const skuPath = product.sku ? `assets/${product.sku}/fiber.png` : null;
+  return [
+    product.assets?.fiber,
+    product.assets?.singleFiber,
+    product.assets?.fiberMain,
+    product.fiber?.asset,
+    product.fiber?.image,
+    product.fiber?.main,
+    skuPath,
+  ].filter(Boolean);
 }
 
 async function hydrateManufacturerAssets(styles) {
   return Promise.all(
     styles.map(async (style) => {
-      if (!style.asset) return style;
-
-      try {
-        const image = await loadImage(resolveLibraryAssetUrl(style.asset));
-        return {
-          ...style,
-          assetImage: image,
-          renderMode: "asset",
-        };
-      } catch {
-        return {
-          ...style,
-          renderMode: "asset-missing",
-        };
-      }
+      const stripAsset = await loadFirstLibraryImage(style.assetCandidates);
+      const fiberAsset = await loadFirstLibraryImage(style.fiberAssetCandidates);
+      return {
+        ...style,
+        asset: stripAsset?.path ?? style.asset,
+        assetImage: stripAsset?.image ?? null,
+        assetMetrics: stripAsset ? analyzeLashAsset(stripAsset.image) : null,
+        fiberAsset: fiberAsset?.path ?? style.fiberAsset,
+        fiberImage: fiberAsset?.image ?? null,
+        fiberMetrics: fiberAsset ? analyzeLashAsset(fiberAsset.image) : null,
+        renderMode: fiberAsset ? "fiber" : stripAsset ? "asset" : "asset-missing",
+      };
     }),
   );
+}
+
+async function loadFirstLibraryImage(paths = []) {
+  for (const assetPath of paths.filter(Boolean)) {
+    try {
+      return {
+        path: assetPath,
+        image: await loadImage(resolveLibraryAssetUrl(assetPath)),
+      };
+    } catch {
+      // Try the next declared asset path.
+    }
+  }
+  return null;
 }
 
 function resolveLibraryAssetUrl(assetPath) {
@@ -342,7 +406,7 @@ function renderStyleCards() {
   if (visibleStyles.length === 0) {
     const empty = document.createElement("div");
     empty.className = "catalog-empty";
-    empty.textContent = "没有匹配的款式，请调整筛选条件。";
+    empty.textContent = "真实睫毛素材库暂无匹配款式。";
     els.styleGrid.append(empty);
     return;
   }
@@ -350,7 +414,7 @@ function renderStyleCards() {
   visibleStyles.forEach((style) => {
     const card = document.createElement("button");
     card.type = "button";
-    card.className = `lash-card ${style.id === state.selectedStyle.id ? "active" : ""}`;
+    card.className = `lash-card ${style.id === state.selectedStyle?.id ? "active" : ""}`;
     card.innerHTML = `
       <canvas class="lash-preview" width="220" height="58" aria-hidden="true"></canvas>
       <span class="lash-sku">${style.sku}</span>
@@ -365,19 +429,17 @@ function renderStyleCards() {
     `;
     card.addEventListener("click", () => {
       state.selectedStyle = style;
-      if (!style.assetImage) {
-        setStatus(`缺少真实素材：${style.asset}`);
-      }
+      setStatus(style.fiberImage ? `已选择单根排布：${style.sku}` : `已选择真实素材：${style.sku}`);
       renderStyleCards();
       renderSelectedProduct();
       renderLibraryCards();
       redraw();
     });
     els.styleGrid.append(card);
-    if (style.assetImage) {
-      drawImageLashSwatch(card.querySelector("canvas"), style.assetImage);
+    if (style.fiberImage) {
+      drawFiberLashSwatch(card.querySelector("canvas"), style);
     } else {
-      drawMissingAssetSwatch(card.querySelector("canvas"));
+      drawImageLashSwatch(card.querySelector("canvas"), style.assetImage);
     }
   });
 }
@@ -414,7 +476,7 @@ function renderSelectedProduct() {
   els.selectedProduct.innerHTML = `
     <span>当前选择</span>
     <strong>${style.name}</strong>
-    <small>${style.sku} · ${style.series}${style.assetImage ? " · 真实素材" : " · 缺少真实素材"}</small>
+    <small>${style.sku} · ${style.series}${getRenderModeLabel(style)}</small>
     <div class="selected-specs">
       <span>${style.lengthMm}</span>
       <span>${style.curlGrade} 翘</span>
@@ -422,6 +484,11 @@ function renderSelectedProduct() {
       <span class="color-chip" style="--chip-color: ${style.color}">${style.colorName}</span>
     </div>
   `;
+}
+
+function getRenderModeLabel(style) {
+  if (style.fiberImage) return " · 单根排布";
+  return style.assetImage ? " · 真实素材" : "";
 }
 
 function renderLibraryCards() {
@@ -469,23 +536,6 @@ function renderLibraryCards() {
   window.lucide?.createIcons();
 }
 
-function drawLashSwatch(canvas, style) {
-  const swatchCtx = canvas.getContext("2d");
-  swatchCtx.clearRect(0, 0, canvas.width, canvas.height);
-  const points = Array.from({ length: 9 }, (_, index) => ({
-    x: 18 + index * 23,
-    y: 36 - Math.sin((index / 8) * Math.PI) * 14,
-  }));
-  drawLashSet(swatchCtx, points, style, {
-    length: 0.75,
-    density: 0.85,
-    curl: 1,
-    thickness: 1,
-    lift: 0,
-    opacity: 1,
-  });
-}
-
 function drawImageLashSwatch(canvas, image) {
   const swatchCtx = canvas.getContext("2d");
   swatchCtx.clearRect(0, 0, canvas.width, canvas.height);
@@ -494,20 +544,78 @@ function drawImageLashSwatch(canvas, image) {
   swatchCtx.drawImage(image, (canvas.width - width) / 2, canvas.height - height - 4, width, height);
 }
 
-function drawMissingAssetSwatch(canvas) {
+function drawFiberLashSwatch(canvas, style) {
   const swatchCtx = canvas.getContext("2d");
   swatchCtx.clearRect(0, 0, canvas.width, canvas.height);
-  swatchCtx.fillStyle = "#f4f6f3";
-  swatchCtx.fillRect(0, 0, canvas.width, canvas.height);
-  swatchCtx.strokeStyle = "#cfd6d2";
-  swatchCtx.setLineDash([6, 5]);
-  swatchCtx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
-  swatchCtx.setLineDash([]);
-  swatchCtx.fillStyle = "#68737a";
-  swatchCtx.font = "700 20px system-ui, sans-serif";
-  swatchCtx.textAlign = "center";
-  swatchCtx.textBaseline = "middle";
-  swatchCtx.fillText("待上传真实素材", canvas.width / 2, canvas.height / 2);
+  const points = Array.from({ length: 9 }, (_, index) => {
+    const t = index / 8;
+    return {
+      x: 18 + t * (canvas.width - 36),
+      y: 42 - Math.sin(t * Math.PI) * 10,
+    };
+  });
+  drawFiberLashSet(
+    swatchCtx,
+    points,
+    style,
+    {
+      ...state.controls,
+      length: 0.62,
+      density: 0.72,
+      curl: 0.9,
+      thickness: 0.9,
+      lift: 0,
+      lashOpacity: 0.92,
+      rootBlend: 0,
+      shadow: 0,
+    },
+    false,
+  );
+}
+
+function analyzeLashAsset(image) {
+  const sampleWidth = 320;
+  const sampleHeight = Math.max(64, Math.round(sampleWidth * (image.naturalHeight / image.naturalWidth)));
+  const probe = document.createElement("canvas");
+  probe.width = sampleWidth;
+  probe.height = sampleHeight;
+  const probeCtx = probe.getContext("2d", { willReadFrequently: true });
+  probeCtx.clearRect(0, 0, sampleWidth, sampleHeight);
+  probeCtx.drawImage(image, 0, 0, sampleWidth, sampleHeight);
+
+  const pixels = probeCtx.getImageData(0, 0, sampleWidth, sampleHeight).data;
+  let bestRow = Math.round(sampleHeight * 0.82);
+  let bestScore = 0;
+  let contentTop = sampleHeight;
+  let contentBottom = 0;
+
+  for (let y = 0; y < sampleHeight; y += 1) {
+    let rowScore = 0;
+    for (let x = 0; x < sampleWidth; x += 1) {
+      const offset = (y * sampleWidth + x) * 4;
+      const alpha = pixels[offset + 3] / 255;
+      if (alpha < 0.04) continue;
+      const red = pixels[offset];
+      const green = pixels[offset + 1];
+      const blue = pixels[offset + 2];
+      const darkness = 1 - Math.min(255, red * 0.299 + green * 0.587 + blue * 0.114) / 255;
+      rowScore += alpha * (0.65 + darkness * 0.35);
+    }
+    if (rowScore > 0.35) {
+      contentTop = Math.min(contentTop, y);
+      contentBottom = Math.max(contentBottom, y);
+    }
+    if (rowScore > bestScore) {
+      bestScore = rowScore;
+      bestRow = y;
+    }
+  }
+
+  return {
+    rootY: clamp(bestRow / sampleHeight, 0.35, 0.94),
+    contentTop: contentTop === sampleHeight ? 0 : contentTop / sampleHeight,
+    contentBottom: contentBottom / sampleHeight,
+  };
 }
 
 function updateControls() {
@@ -627,6 +735,7 @@ async function importCustomLashFile(file) {
     type: "image",
     src,
     image,
+    assetMetrics: analyzeLashAsset(image),
   };
 }
 
@@ -645,6 +754,11 @@ async function loadCustomLashLibrary() {
       image: await loadImage(item.src),
     })),
   );
+  loaded.forEach((style) => {
+    if (style.image && !style.assetMetrics) {
+      style.assetMetrics = analyzeLashAsset(style.image);
+    }
+  });
   state.customStyles = loaded.filter((style) => style.image);
 }
 
@@ -661,7 +775,7 @@ function saveCustomLashLibrary() {
 function deleteCustomStyle(id) {
   state.customStyles = state.customStyles.filter((style) => style.id !== id);
   if (state.selectedStyle?.id === id) {
-    state.selectedStyle = lashStyles[0] ?? null;
+    state.selectedStyle = getDefaultManufacturerStyle(lashStyles);
   }
   saveCustomLashLibrary();
   renderStyleCards();
@@ -945,13 +1059,45 @@ function redraw() {
     right: adjustEyeCurve(eyes.right, state.controls.eyeAdjustments.right),
   };
   if (state.selectedStyle.type === "image") {
-    drawImageLashSet(ctx, adjustedEyes.left, state.selectedStyle.image, state.controls, false);
-    drawImageLashSet(ctx, adjustedEyes.right, state.selectedStyle.image, state.controls, true);
+    drawImageLashSet(
+      ctx,
+      adjustedEyes.left,
+      state.selectedStyle.image,
+      state.controls,
+      false,
+      state.selectedStyle.assetMetrics,
+    );
+    drawImageLashSet(
+      ctx,
+      adjustedEyes.right,
+      state.selectedStyle.image,
+      state.controls,
+      true,
+      state.selectedStyle.assetMetrics,
+    );
+  } else if (state.selectedStyle.fiberImage) {
+    drawFiberLashSet(ctx, adjustedEyes.left, state.selectedStyle, state.controls, false);
+    drawFiberLashSet(ctx, adjustedEyes.right, state.selectedStyle, state.controls, true);
   } else if (state.selectedStyle.assetImage) {
-    drawImageLashSet(ctx, adjustedEyes.left, state.selectedStyle.assetImage, state.controls, false);
-    drawImageLashSet(ctx, adjustedEyes.right, state.selectedStyle.assetImage, state.controls, true);
+    drawImageLashSet(
+      ctx,
+      adjustedEyes.left,
+      state.selectedStyle.assetImage,
+      state.controls,
+      false,
+      state.selectedStyle.assetMetrics,
+    );
+    drawImageLashSet(
+      ctx,
+      adjustedEyes.right,
+      state.selectedStyle.assetImage,
+      state.controls,
+      true,
+      state.selectedStyle.assetMetrics,
+    );
   } else {
-    setStatus(`缺少真实素材：${state.selectedStyle.asset}`);
+    drawEmptyEyeCloseup("等待真实素材");
+    return;
   }
 
   updateEyeCloseup(adjustedEyes);
@@ -1211,7 +1357,7 @@ function getLuma([red, green, blue]) {
   return red * 0.299 + green * 0.587 + blue * 0.114;
 }
 
-function drawImageLashSet(targetCtx, points, image, controls, mirror) {
+function drawImageLashSet(targetCtx, points, image, controls, mirror, metrics = {}) {
   const ordered = [...points].sort((a, b) => a.x - b.x);
   const lifted = ordered.map((point) => ({ ...point, y: point.y + controls.lift }));
   const start = lifted[0];
@@ -1226,11 +1372,12 @@ function drawImageLashSet(targetCtx, points, image, controls, mirror) {
   const rootBlend = controls.rootBlend ?? 0.55;
   const shadow = controls.shadow ?? 0.35;
   const opacity = controls.lashOpacity ?? 0.92;
+  const rootY = clamp(Number(metrics.rootY ?? 0.82), 0.35, 0.94);
 
   drawLashShadow(targetCtx, lifted, eyeWidth, shadow);
 
   targetCtx.save();
-  targetCtx.translate(center.x, center.y - renderHeight * 0.42);
+  targetCtx.translate(center.x, center.y - renderHeight * (rootY - 0.5));
   targetCtx.rotate(angle);
   targetCtx.globalAlpha = Math.min(1, opacity * (0.82 + controls.density * 0.14));
   targetCtx.scale(mirror ? -1 : 1, 1);
@@ -1240,115 +1387,36 @@ function drawImageLashSet(targetCtx, points, image, controls, mirror) {
   drawRootBlendLine(targetCtx, lifted, eyeWidth, rootBlend);
 }
 
-function drawLashSet(targetCtx, points, style, controls) {
-  if (style.layout?.segments?.length) {
-    try {
-      drawProductionLashSet(targetCtx, points, style, controls);
-      return;
-    } catch (error) {
-      console.warn("Production lash render failed, using fallback renderer.", error);
-    }
-  }
-
-  drawBasicLashSet(targetCtx, points, style, controls);
-}
-
-function drawBasicLashSet(targetCtx, points, style, controls) {
+function drawFiberLashSet(targetCtx, points, style, controls, mirror) {
   const ordered = [...points].sort((a, b) => a.x - b.x);
   const lifted = ordered.map((point) => ({ ...point, y: point.y + controls.lift }));
-  const totalWidth = lifted[lifted.length - 1].x - lifted[0].x;
-  const spikeCount = Math.max(8, Math.round(style.spikes * controls.density));
-
-  drawLashShadow(targetCtx, lifted, totalWidth, controls.shadow ?? 0.35);
-
-  targetCtx.save();
-  targetCtx.lineCap = "round";
-  targetCtx.lineJoin = "round";
-  targetCtx.globalAlpha = controls.opacity ?? (controls.lashOpacity ?? 0.92);
-
-  drawBaseLine(targetCtx, lifted, style, controls);
-
-  for (let index = 0; index < spikeCount; index += 1) {
-    const t = spikeCount === 1 ? 0.5 : index / (spikeCount - 1);
-    const base = pointAt(lifted, t);
-    const tangent = tangentAt(lifted, t);
-    const normal = normalize({ x: -tangent.y, y: tangent.x });
-    const outward = normal.y > 0 ? { x: -normal.x, y: -normal.y } : normal;
-    const edgeBoost = style.fan * (0.6 + Math.abs(t - 0.5) * 0.72);
-    const centerBoost = 1 + Math.sin(t * Math.PI) * style.curve;
-    const curl = style.curve * controls.curl;
-    const length = totalWidth * style.length * 0.18 * controls.length * edgeBoost * centerBoost;
-    const lean = (t - 0.5) * totalWidth * 0.055 * style.fan;
-    const tip = {
-      x: base.x + outward.x * length + lean,
-      y: base.y + outward.y * length - length * (0.4 + curl * 0.55),
-    };
-
-    targetCtx.strokeStyle = style.color;
-    targetCtx.lineWidth = style.thickness * controls.thickness * (0.85 + controls.density * 0.35);
-    drawCurvedLash(targetCtx, base, tip, tangent, curl);
-
-    if (style.id.includes("volume") && index % 2 === 0) {
-      const sideTip = {
-        x: tip.x + tangent.x * totalWidth * 0.018,
-        y: tip.y + tangent.y * totalWidth * 0.018,
-      };
-      targetCtx.globalAlpha = 0.55;
-      targetCtx.lineWidth = style.thickness * controls.thickness * 0.72;
-      drawCurvedLash(targetCtx, base, sideTip, tangent, curl * 0.8);
-      targetCtx.globalAlpha = controls.opacity ?? 0.92;
-    }
-  }
-
-  targetCtx.restore();
-  drawRootBlendLine(targetCtx, lifted, totalWidth, controls.rootBlend ?? 0.55);
-}
-
-function drawProductionLashSet(targetCtx, points, style, controls) {
-  const ordered = [...points].sort((a, b) => a.x - b.x);
-  const lifted = ordered.map((point) => ({ ...point, y: point.y + controls.lift }));
-  const totalWidth = lifted[lifted.length - 1].x - lifted[0].x;
-  const viewerLeftEye = pointAt(lifted, 0.5).x < els.canvas.width / 2;
-  const render = style.render ?? {};
-  const fiber = style.fiber ?? {};
-  const curlProfile = style.curlProfile ?? {};
-  const baseCount = Math.max(14, Number(style.spikes ?? 36));
-  const densityScale = controls.density * getAverageSegmentDensity(style);
-  const lashCount = Math.min(
-    MAX_RENDER_FIBERS_PER_EYE,
+  const start = lifted[0];
+  const end = lifted[lifted.length - 1];
+  const eyeWidth = Math.hypot(end.x - start.x, end.y - start.y);
+  const baseCount = Number(style.layout?.baseCount ?? style.spikes ?? 42);
+  const densityScale = getAverageSegmentDensity(style) * controls.density;
+  const fiberCount = Math.min(
+    MAX_FIBERS_PER_EYE,
     Math.max(10, Math.round(baseCount * densityScale)),
   );
-  const curl = Number(curlProfile.curveStrength ?? style.curve ?? 0.36) * controls.curl;
-  const rootBand = Number(render.rootBand ?? 0.5);
-  const randomness = Number(render.randomness ?? 0.16);
+  const render = style.render ?? {};
+  const randomness = Number(style.layout?.randomness ?? render.randomness ?? 0.16);
   const opacity = Math.min(1, Number(render.opacity ?? controls.lashOpacity ?? 0.92));
-  const thicknessBase = productionThicknessToLineWidth(
-    Number(fiber.thicknessMm ?? style.thicknessMm ?? 0.1),
-    style,
-  );
-  const finish = fiber.finish ?? "semi-matte";
-  const layoutStyle = getLashLayoutStyle(style);
 
-  drawLashShadow(targetCtx, lifted, totalWidth, controls.shadow ?? 0.35);
+  drawLashShadow(targetCtx, lifted, eyeWidth, controls.shadow ?? 0.35);
 
   targetCtx.save();
-  targetCtx.lineCap = "round";
-  targetCtx.lineJoin = "round";
-  targetCtx.globalAlpha = opacity;
+  targetCtx.imageSmoothingEnabled = true;
+  targetCtx.imageSmoothingQuality = "high";
 
-  drawBaseLine(targetCtx, lifted, style, {
-    ...controls,
-    thickness: controls.thickness * (0.72 + rootBand * 0.56),
-  });
-
-  const fibers = [];
-  for (let index = 0; index < lashCount; index += 1) {
-    const rawT = lashCount === 1 ? 0.5 : index / (lashCount - 1);
-    const spacingJitter = deterministicJitter(style.id, index, 1) * randomness * 0.42;
-    const t = clamp(rawT + spacingJitter / Math.max(1, lashCount), 0.015, 0.985);
-    const productionT = viewerLeftEye ? 1 - t : t;
-    const profile = sampleLayoutProfile(style, productionT);
-    const skipChance = Math.max(0, 0.74 - profile.density);
+  for (let index = 0; index < fiberCount; index += 1) {
+    const rawT = fiberCount === 1 ? 0.5 : index / (fiberCount - 1);
+    const spacingJitter = deterministicJitter(style.id, index, 1) * randomness * 0.34;
+    const t = clamp(rawT + spacingJitter / Math.max(1, fiberCount), 0.018, 0.982);
+    const productT = mirror ? 1 - t : t;
+    const profile = sampleLayoutProfile(style, productT);
+    const density = Math.max(0.1, Number(profile.density ?? 1));
+    const skipChance = Math.max(0, 0.72 - density);
     if (skipChance > 0 && deterministicUnit(style.id, index, 2) < skipChance) {
       continue;
     }
@@ -1357,258 +1425,82 @@ function drawProductionLashSet(targetCtx, points, style, controls) {
     const tangent = tangentAt(lifted, t);
     const normal = normalize({ x: -tangent.y, y: tangent.x });
     const outward = normal.y > 0 ? { x: -normal.x, y: -normal.y } : normal;
-    const depth = deterministicJitter(style.id, index, 8);
-    const layerOffset = totalWidth * 0.006 * depth;
-    const layeredBase = {
-      x: base.x + outward.x * layerOffset + tangent.x * deterministicJitter(style.id, index, 9) * totalWidth * 0.003,
-      y: base.y + outward.y * layerOffset + depth * totalWidth * 0.004,
-    };
-    const zoneLength = Number(profile.lengthMm || getLengthFromRange(style.lengthMm));
-    const lengthRatio = zoneLength / 10;
-    const cluster = getClusterBoost(style, productionT);
-    const edgeLean = (productionT - 0.5) * totalWidth * 0.035 * Number(render.fan ?? style.fan ?? 1);
-    const densityLean = deterministicJitter(style.id, index, 3) * totalWidth * randomness * 0.018;
-    const lashLength =
-      totalWidth *
-      0.108 *
-      lengthRatio *
+    const profileLength = Number(profile.lengthMm || getLengthFromRange(style.lengthMm));
+    const cluster = getClusterBoost(style, productT);
+    const fiberHeight =
+      eyeWidth *
+      0.22 *
+      (profileLength / 10) *
       controls.length *
-      (0.82 + profile.density * 0.18) *
-      (0.92 + cluster * 0.22);
-    const curlLift = lashLength * (0.36 + curl * 0.62);
-    const tip = {
-      x: layeredBase.x + outward.x * lashLength + edgeLean + densityLean,
-      y: layeredBase.y + outward.y * lashLength - curlLift * (0.94 + depth * 0.08),
-    };
-    const lineWidth =
-      thicknessBase *
+      (0.88 + controls.curl * 0.18) *
+      (0.92 + cluster * 0.24) *
+      (0.94 + deterministicJitter(style.id, index, 3) * randomness * 0.42);
+    const aspect = style.fiberImage.naturalWidth / style.fiberImage.naturalHeight;
+    const fiberWidth =
+      fiberHeight *
+      aspect *
       controls.thickness *
-      (0.74 + profile.density * 0.26) *
-      (0.88 + cluster * 0.18);
-
-    const mainFiber = {
-      base: layeredBase,
-      tip,
-      tangent,
-      curl,
-      lineWidth,
-      color: style.color,
-      finish,
-      depth,
-      profile,
-      cluster,
-      index,
-      kind: "main",
+      (0.92 + density * 0.08) *
+      (0.94 + deterministicJitter(style.id, index, 4) * randomness * 0.32);
+    const angleDeg =
+      Number(profile.angleDeg ?? 0) +
+      (productT - 0.5) * Number(style.layout?.fanSpread ?? render.fan ?? 0.18) * 34 +
+      deterministicJitter(style.id, index, 5) * randomness * 18;
+    const curlLift = eyeWidth * 0.012 * controls.curl * (profileLength / 10);
+    const baseOffset = {
+      x: outward.x * (eyeWidth * 0.006 * deterministicJitter(style.id, index, 6)),
+      y: outward.y * curlLift + deterministicJitter(style.id, index, 7) * eyeWidth * 0.003,
     };
-    fibers.push(mainFiber);
+    const direction = rotateVector(outward, (angleDeg * Math.PI) / 180);
+    const targetAngle = Math.atan2(direction.y, direction.x);
+    const rootY = clamp(Number(style.fiberMetrics?.rootY ?? 0.86), 0.35, 0.96);
 
-    if (layoutStyle === "spike-cluster" && cluster > 0.38) {
-      fibers.push(makeSideFiber(mainFiber, -1));
-      fibers.push(makeSideFiber(mainFiber, 1));
-    }
-
-    if (layoutStyle === "full-volume" && index % 3 === 0) {
-      fibers.push(makeSideFiber(mainFiber, 1, 0.76));
-    }
+    drawSingleFiber(targetCtx, style.fiberImage, {
+      x: base.x + baseOffset.x,
+      y: base.y + baseOffset.y,
+      width: fiberWidth,
+      height: fiberHeight,
+      rotation: targetAngle + Math.PI / 2,
+      rootY,
+      opacity: opacity * clamp(0.78 + density * 0.18 + deterministicJitter(style.id, index, 8) * 0.08, 0.5, 1),
+      shadow: controls.shadow ?? 0.35,
+    });
   }
 
-  fibers
-    .sort((a, b) => a.depth - b.depth)
-    .slice(0, MAX_RENDER_FIBERS_PER_EYE)
-    .forEach((fiber) => drawSpatialFiber(targetCtx, fiber, opacity));
-
   targetCtx.restore();
-  drawRootBlendLine(targetCtx, lifted, totalWidth, (controls.rootBlend ?? 0.55) * (0.82 + rootBand * 0.28));
+  drawRootBlendLine(targetCtx, lifted, eyeWidth, controls.rootBlend ?? 0.55);
 }
 
-function makeSideFiber(fiber, direction, scale = 0.62) {
-  const offset = {
-    x: fiber.tangent.x * 7 * direction,
-    y: fiber.tangent.y * 7 * direction,
-  };
-  return {
-    ...fiber,
-    tip: {
-      x: fiber.tip.x + offset.x,
-      y: fiber.tip.y + offset.y,
-    },
-    lineWidth: fiber.lineWidth * scale,
-    curl: fiber.curl * 0.86,
-    depth: fiber.depth - 0.18,
-    kind: "side",
-  };
-}
-
-function drawSpatialFiber(targetCtx, fiber, baseOpacity) {
-  const depthAlpha = clamp(0.66 + fiber.depth * 0.22, 0.46, 0.98);
-  const shadowOffset = {
-    x: 0.9 + fiber.depth * 0.35,
-    y: 1.5 + Math.abs(fiber.depth) * 1.2,
-  };
-
-  drawFastFiberShadow(targetCtx, fiber, shadowOffset, baseOpacity * depthAlpha);
-
-  targetCtx.save();
-  targetCtx.globalAlpha = baseOpacity * depthAlpha;
-  targetCtx.filter = "none";
-  drawTaperedLash(targetCtx, fiber.base, fiber.tip, fiber.tangent, fiber.curl, fiber.lineWidth, fiber.color, fiber.finish, {
-    highlight: fiber.depth > -0.25 ? 1 : 0.55,
-    tipFade: 1,
-  });
-  targetCtx.restore();
-}
-
-function drawFastFiberShadow(targetCtx, fiber, offset, alpha) {
-  const base = addPoint(fiber.base, offset);
-  const tip = addPoint(fiber.tip, offset);
-  const control = {
-    x: base.x + (tip.x - base.x) * 0.42 + fiber.tangent.x * 18 * fiber.curl,
-    y: base.y + (tip.y - base.y) * 0.34 - 14 * fiber.curl,
-  };
-
-  targetCtx.save();
-  targetCtx.globalAlpha = alpha * 0.18;
-  targetCtx.strokeStyle = "rgba(10, 7, 5, 0.55)";
-  targetCtx.lineWidth = fiber.lineWidth * 0.9;
-  targetCtx.beginPath();
-  targetCtx.moveTo(base.x, base.y);
-  targetCtx.quadraticCurveTo(control.x, control.y, tip.x, tip.y);
-  targetCtx.stroke();
-  targetCtx.restore();
-}
-
-function getAverageSegmentDensity(style) {
-  const segments = style.layout?.segments ?? [];
-  if (segments.length === 0) return 1;
-  return segments.reduce((sum, segment) => sum + Number(segment.density ?? 1), 0) / segments.length;
-}
-
-function sampleLayoutProfile(style, t) {
-  const segments = style.layout?.segments ?? [];
-  if (segments.length === 0) {
-    return {
-      lengthMm: getLengthFromRange(style.lengthMm),
-      density: 1,
-    };
-  }
-
-  const scaled = clamp(t, 0, 1) * (segments.length - 1);
-  const index = Math.min(segments.length - 2, Math.floor(scaled));
-  const localT = scaled - index;
-  const current = segments[index];
-  const next = segments[index + 1] ?? current;
-
-  return {
-    lengthMm: lerpNumber(Number(current.lengthMm), Number(next.lengthMm), localT),
-    density: lerpNumber(Number(current.density ?? 1), Number(next.density ?? 1), localT),
-  };
-}
-
-function getClusterBoost(style, t) {
-  const clusters = style.layout?.clusters ?? [];
-  if (clusters.length === 0) return 0;
-  return clusters.reduce((maxBoost, cluster) => {
-    const distance = Math.abs(t - Number(cluster.position));
-    const width = Number(cluster.width ?? 0.055);
-    const boost = Math.max(0, 1 - distance / width) * Number(cluster.strength ?? 0);
-    return Math.max(maxBoost, boost);
-  }, 0);
-}
-
-function getLashLayoutStyle(style) {
-  return style.layout?.style ?? style.layout?.type ?? "";
-}
-
-function productionThicknessToLineWidth(thicknessMm, style) {
-  const fallback = Number(style.thickness ?? 1.25);
-  if (!Number.isFinite(thicknessMm)) return fallback;
-  return clamp(0.72 + thicknessMm * 7.4, 0.9, 2.15);
-}
-
-function getLengthFromRange(value) {
-  const numbers = String(value).match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-  if (numbers.length === 0) return 10;
-  return numbers.reduce((sum, number) => sum + number, 0) / numbers.length;
-}
-
-function drawTaperedLash(targetCtx, base, tip, tangent, curve, lineWidth, color, finish, options = {}) {
-  const control = {
-    x: base.x + (tip.x - base.x) * 0.42 + tangent.x * 18 * curve,
-    y: base.y + (tip.y - base.y) * 0.34 - 14 * curve,
-  };
-  const mid = quadraticPoint(base, control, tip, 0.54);
-  const nearTip = quadraticPoint(base, control, tip, 0.82);
-  const tipFade = options.tipFade ?? 1;
-  const highlightScale = options.highlight ?? 1;
-  const highlightAlpha = (finish === "gloss" ? 0.2 : finish === "satin" ? 0.13 : 0.06) * highlightScale;
-
-  targetCtx.save();
-  targetCtx.strokeStyle = adjustColor(color, -16, 0.92);
-  strokeQuadraticSegment(targetCtx, base, control, mid, lineWidth * 1.18);
-  targetCtx.strokeStyle = color;
-  strokeQuadraticSegment(targetCtx, base, control, mid, lineWidth);
-  targetCtx.globalAlpha *= 0.82;
-  strokeQuadraticSegment(targetCtx, mid, control, nearTip, lineWidth * 0.52);
-  targetCtx.globalAlpha *= 0.78 * tipFade;
-  strokeQuadraticSegment(targetCtx, nearTip, control, tip, Math.max(0.2, lineWidth * 0.16));
-
-  if (highlightAlpha > 0) {
+function drawSingleFiber(targetCtx, image, options) {
+  const shadowAlpha = Math.min(0.18, options.shadow * 0.14);
+  if (shadowAlpha > 0) {
     targetCtx.save();
-    targetCtx.globalAlpha = highlightAlpha;
-    targetCtx.strokeStyle = "rgba(255, 255, 255, 0.7)";
-    const highlightStart = quadraticPoint(base, control, tip, 0.12);
-    const highlightEnd = quadraticPoint(base, control, tip, 0.48);
-    strokeQuadraticSegment(targetCtx, highlightStart, control, highlightEnd, Math.max(0.2, lineWidth * 0.14));
+    targetCtx.translate(options.x + 0.8, options.y + 1.4);
+    targetCtx.rotate(options.rotation);
+    targetCtx.globalAlpha = shadowAlpha;
+    targetCtx.filter = "blur(1.2px)";
+    targetCtx.drawImage(
+      image,
+      -options.width / 2,
+      -options.height * options.rootY,
+      options.width,
+      options.height,
+    );
     targetCtx.restore();
   }
-  targetCtx.restore();
-}
 
-function drawClusterSideLash(targetCtx, base, tip, tangent, curl, lineWidth, color, direction) {
-  const offset = {
-    x: tangent.x * 7 * direction,
-    y: tangent.y * 7 * direction,
-  };
-  const sideTip = {
-    x: tip.x + offset.x,
-    y: tip.y + offset.y,
-  };
   targetCtx.save();
-  targetCtx.globalAlpha *= 0.58;
-  drawTaperedLash(targetCtx, base, sideTip, tangent, curl * 0.86, lineWidth * 0.56, color, "semi-matte");
+  targetCtx.translate(options.x, options.y);
+  targetCtx.rotate(options.rotation);
+  targetCtx.globalAlpha = options.opacity;
+  targetCtx.drawImage(
+    image,
+    -options.width / 2,
+    -options.height * options.rootY,
+    options.width,
+    options.height,
+  );
   targetCtx.restore();
-}
-
-function strokeQuadraticSegment(targetCtx, start, control, end, lineWidth) {
-  targetCtx.beginPath();
-  targetCtx.moveTo(start.x, start.y);
-  targetCtx.quadraticCurveTo(control.x, control.y, end.x, end.y);
-  targetCtx.lineWidth = lineWidth;
-  targetCtx.stroke();
-}
-
-function quadraticPoint(start, control, end, t) {
-  const oneMinusT = 1 - t;
-  return {
-    x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
-    y: oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y,
-  };
-}
-
-function addPoint(point, offset) {
-  return {
-    x: point.x + offset.x,
-    y: point.y + offset.y,
-  };
-}
-
-function adjustColor(color, amount, alpha = 1) {
-  if (!String(color).startsWith("#")) return color;
-  const value = color.slice(1);
-  const red = clamp(parseInt(value.slice(0, 2), 16) + amount, 0, 255);
-  const green = clamp(parseInt(value.slice(2, 4), 16) + amount, 0, 255);
-  const blue = clamp(parseInt(value.slice(4, 6), 16) + amount, 0, 255);
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function drawLashShadow(targetCtx, points, eyeWidth, amount) {
@@ -1642,34 +1534,6 @@ function drawRootBlendLine(targetCtx, points, eyeWidth, amount) {
   targetCtx.restore();
 }
 
-function drawBaseLine(targetCtx, points, style, controls) {
-  targetCtx.beginPath();
-  points.forEach((point, index) => {
-    if (index === 0) {
-      targetCtx.moveTo(point.x, point.y);
-    } else {
-      const previous = points[index - 1];
-      targetCtx.quadraticCurveTo(previous.x, previous.y, point.x, point.y);
-    }
-  });
-  targetCtx.strokeStyle = style.color;
-  targetCtx.lineWidth = Math.max(1, style.thickness * controls.thickness * 1.15);
-  targetCtx.globalAlpha = 0.72;
-  targetCtx.stroke();
-  targetCtx.globalAlpha = 0.92;
-}
-
-function drawCurvedLash(targetCtx, base, tip, tangent, curve) {
-  const control = {
-    x: base.x + (tip.x - base.x) * 0.45 + tangent.x * 12 * curve,
-    y: base.y + (tip.y - base.y) * 0.35 - 10 * curve,
-  };
-  targetCtx.beginPath();
-  targetCtx.moveTo(base.x, base.y);
-  targetCtx.quadraticCurveTo(control.x, control.y, tip.x, tip.y);
-  targetCtx.stroke();
-}
-
 function pointAt(points, t) {
   const scaled = t * (points.length - 1);
   const index = Math.min(points.length - 2, Math.floor(scaled));
@@ -1693,6 +1557,68 @@ function lerpPoint(a, b, t) {
 
 function lerpNumber(a, b, t) {
   return a + (b - a) * t;
+}
+
+function sampleLayoutProfile(style, t) {
+  const segments = style.layout?.segments ?? [];
+  if (segments.length === 0) {
+    return {
+      lengthMm: getLengthFromRange(style.lengthMm),
+      density: 1,
+      angleDeg: 0,
+    };
+  }
+
+  const positionedSegment = segments.find((segment) => {
+    const range = segment.position ?? segment.range;
+    return Array.isArray(range) && t >= Number(range[0]) && t <= Number(range[1]);
+  });
+  if (positionedSegment) {
+    return positionedSegment;
+  }
+
+  const scaled = clamp(t, 0, 1) * (segments.length - 1);
+  const index = Math.min(segments.length - 2, Math.floor(scaled));
+  const localT = scaled - index;
+  const current = segments[index];
+  const next = segments[index + 1] ?? current;
+  return {
+    lengthMm: lerpNumber(Number(current.lengthMm), Number(next.lengthMm), localT),
+    density: lerpNumber(Number(current.density ?? 1), Number(next.density ?? 1), localT),
+    angleDeg: lerpNumber(Number(current.angleDeg ?? 0), Number(next.angleDeg ?? 0), localT),
+  };
+}
+
+function getAverageSegmentDensity(style) {
+  const segments = style.layout?.segments ?? [];
+  if (segments.length === 0) return 1;
+  return segments.reduce((sum, segment) => sum + Number(segment.density ?? 1), 0) / segments.length;
+}
+
+function getClusterBoost(style, t) {
+  const clusters = style.layout?.clusters ?? [];
+  if (clusters.length === 0) return 0;
+  return clusters.reduce((maxBoost, cluster) => {
+    const distance = Math.abs(t - Number(cluster.position));
+    const width = Number(cluster.width ?? 0.055);
+    const boost = Math.max(0, 1 - distance / width) * Number(cluster.strength ?? 0);
+    return Math.max(maxBoost, boost);
+  }, 0);
+}
+
+function getLengthFromRange(value) {
+  const numbers = String(value).match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+  if (numbers.length === 0) return 10;
+  return numbers.reduce((sum, number) => sum + number, 0) / numbers.length;
+}
+
+function rotateVector(vector, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return {
+    x: vector.x * cos - vector.y * sin,
+    y: vector.x * sin + vector.y * cos,
+  };
 }
 
 function clamp(value, min, max) {

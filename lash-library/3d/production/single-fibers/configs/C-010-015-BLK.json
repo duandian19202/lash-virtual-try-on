@@ -1,0 +1,41 @@
+{
+  "fiberId": "C-010-015-BLK",
+  "name": "C翘 10mm 0.15 黑色单根",
+  "curl": "C",
+  "lengthMm": 10,
+  "thicknessMm": 0.15,
+  "color": {
+    "name": "黑色",
+    "base": "#050505",
+    "edge": "#000000",
+    "highlight": "#2b2b28"
+  },
+  "material": {
+    "type": "PBT",
+    "finish": "satin",
+    "roughness": 0.66,
+    "specular": 0.14,
+    "anisotropic": 0.68
+  },
+  "geometry": {
+    "rootRadius": 0.02,
+    "midRadius": 0.009,
+    "tipRadius": 0.00015,
+    "rootBulbRadius": 0.017,
+    "glueCollarRadius": 0.014,
+    "curveStrength": 0.6,
+    "rootStraightness": 0.18,
+    "tipHook": 0.11,
+    "twist": 0.1,
+    "rootLength": 0.018,
+    "rootSection": 0.026,
+    "rootStartScale": 0.46,
+    "tipExtension": 0.026
+  },
+  "render": {
+    "widthPx": 1400,
+    "heightPx": 1400,
+    "samples": 128,
+    "output": "lash-library/3d/production/single-fibers/renders/C-010-015-BLK/main.png"
+  }
+}

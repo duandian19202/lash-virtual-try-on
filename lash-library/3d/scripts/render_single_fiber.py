@@ -5,14 +5,19 @@ import sys
 from pathlib import Path
 
 import bpy
+from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True)
+    parser.add_argument("--config")
+    parser.add_argument("--config-dir")
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else sys.argv[1:]
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if not args.config and not args.config_dir:
+        parser.error("provide --config or --config-dir")
+    return args
 
 
 def hex_to_rgba(value, alpha=1):
@@ -45,14 +50,17 @@ def taper_radius(config, t):
     root = geometry["rootRadius"]
     mid = geometry["midRadius"]
     tip = geometry["tipRadius"]
-    if t < 0.42:
-        local = t / 0.42
-        return lerp(root, mid, local ** 0.75)
-    local = (t - 0.42) / 0.58
-    return lerp(mid, tip, local ** 1.55)
+    if t < 0.34:
+        local = t / 0.34
+        return lerp(root, mid, local ** 0.68)
+    if t < 0.86:
+        local = (t - 0.34) / 0.52
+        return lerp(mid, mid * 0.48, local ** 1.18)
+    local = (t - 0.86) / 0.14
+    return lerp(mid * 0.48, tip, local ** 2.25)
 
 
-def make_material(name, color, roughness, specular):
+def make_material(name, color, roughness, specular, anisotropic=0.4, bump_strength=0.0):
     material = bpy.data.materials.new(name)
     material.diffuse_color = color
     material.use_nodes = True
@@ -66,10 +74,22 @@ def make_material(name, color, roughness, specular):
     bsdf.inputs["Metallic"].default_value = 0
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Specular IOR Level"].default_value = specular
-    bsdf.inputs["Coat Weight"].default_value = 0.22
-    bsdf.inputs["Coat Roughness"].default_value = 0.38
+    bsdf.inputs["Coat Weight"].default_value = 0.16
+    bsdf.inputs["Coat Roughness"].default_value = 0.44
     if "Anisotropic" in bsdf.inputs:
-        bsdf.inputs["Anisotropic"].default_value = 0.42
+        bsdf.inputs["Anisotropic"].default_value = anisotropic
+    if bump_strength > 0:
+        noise = nodes.new(type="ShaderNodeTexNoise")
+        noise.location = (-540, -190)
+        noise.inputs["Scale"].default_value = 95
+        noise.inputs["Detail"].default_value = 13
+        noise.inputs["Roughness"].default_value = 0.58
+        bump = nodes.new(type="ShaderNodeBump")
+        bump.location = (-260, -170)
+        bump.inputs["Strength"].default_value = bump_strength
+        bump.inputs["Distance"].default_value = 0.018
+        material.node_tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+        material.node_tree.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     material.node_tree.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
     return material
 
@@ -81,28 +101,44 @@ def make_fiber_mesh(config, material):
     p1 = Vector((0.02, -0.52 + length * geometry["rootStraightness"], 0.015))
     p2 = Vector((length * 0.18, -0.52 + length * 0.66, 0.04))
     p3 = Vector((length * geometry["tipHook"], -0.52 + length * (1 + geometry["curveStrength"] * 0.24), 0.08))
+    root_direction = (p1 - p0).normalized()
+    root_length = geometry.get("rootLength", 0.042)
+    root_start = p0 - root_direction * root_length
+    root_section = geometry.get("rootSection", 0.045)
 
-    rings = 58
-    sides = 14
+    rings = 116
+    sides = 24
     verts = []
     faces = []
     previous_normal = Vector((1, 0, 0))
 
     for ring in range(rings):
-        t = ring / (rings - 1)
-        center = cubic(p0, p1, p2, p3, t)
-        tangent = cubic_tangent(p0, p1, p2, p3, t)
+        q = ring / (rings - 1)
+        if q < root_section:
+            root_t = q / root_section
+            center = root_start + root_direction * root_length * root_t
+            tangent = root_direction
+            root_profile = math.sin(root_t * math.pi * 0.5)
+            root_start_scale = geometry.get("rootStartScale", 0.2)
+            radius = geometry["rootRadius"] * lerp(root_start_scale, 1, root_profile)
+        else:
+            t = (q - root_section) / (1 - root_section)
+            center = cubic(p0, p1, p2, p3, t)
+            tangent = cubic_tangent(p0, p1, p2, p3, t)
+            radius = taper_radius(config, t)
         binormal = tangent.cross(previous_normal).normalized()
         if binormal.length == 0:
             binormal = Vector((0, 0, 1))
         normal = binormal.cross(tangent).normalized()
         previous_normal = normal
-        radius = taper_radius(config, t)
 
         for side in range(sides):
-            angle = (side / sides) * math.tau + geometry["twist"] * t * math.tau
-            ellipse = 0.72 + 0.28 * abs(math.cos(angle))
-            offset = normal * math.cos(angle) * radius * ellipse + binormal * math.sin(angle) * radius
+            angle = (side / sides) * math.tau + geometry["twist"] * q * math.tau
+            ellipse = 0.68 + 0.32 * abs(math.cos(angle))
+            longitudinal_grain = 1 + 0.018 * math.sin(angle * 3.0 + q * 17.0)
+            hand_variation = 1 + 0.009 * math.sin(q * 91.0 + side * 0.73)
+            local_radius = radius * longitudinal_grain * hand_variation
+            offset = normal * math.cos(angle) * local_radius * ellipse + binormal * math.sin(angle) * local_radius
             verts.append(center + offset)
 
     for ring in range(rings - 1):
@@ -112,6 +148,15 @@ def make_fiber_mesh(config, material):
             c = (ring + 1) * sides + (side + 1) % sides
             d = (ring + 1) * sides + side
             faces.append((a, b, c, d))
+    start_center = len(verts)
+    verts.append(root_start)
+    end_center = len(verts)
+    verts.append(p3 + cubic_tangent(p0, p1, p2, p3, 1) * geometry.get("tipExtension", 0.028))
+    for side in range(sides):
+        faces.append((start_center, (side + 1) % sides, side))
+        a = (rings - 1) * sides + side
+        b = (rings - 1) * sides + (side + 1) % sides
+        faces.append((end_center, a, b))
 
     mesh = bpy.data.meshes.new("single_fiber_mesh")
     mesh.from_pydata([tuple(v) for v in verts], [], faces)
@@ -123,67 +168,7 @@ def make_fiber_mesh(config, material):
     obj.select_set(True)
     bpy.ops.object.shade_smooth()
     obj.select_set(False)
-    return obj, p0
-
-
-def add_root_sleeve(config, material, root_point):
-    geometry = config["geometry"]
-    length = config["lengthMm"] * 0.095
-    direction = Vector((0.02, length * geometry["rootStraightness"], 0.015)).normalized()
-    side = direction.cross(Vector((0, 0, 1)))
-    if side.length == 0:
-        side = Vector((1, 0, 0))
-    side.normalize()
-    up = side.cross(direction).normalized()
-
-    rings = 9
-    sides = 14
-    verts = []
-    faces = []
-    sleeve_length = 0.105
-    for ring in range(rings):
-        t = ring / (rings - 1)
-        center = root_point + direction * (t * sleeve_length - 0.012)
-        radius = lerp(geometry["rootRadius"] * 1.32, geometry["rootRadius"] * 0.92, t)
-        for side_index in range(sides):
-            angle = (side_index / sides) * math.tau
-            flatten = 0.76 + 0.14 * math.sin(angle + 0.8)
-            offset = side * math.cos(angle) * radius * flatten + up * math.sin(angle) * radius * 0.62
-            verts.append(center + offset)
-
-    for ring in range(rings - 1):
-        for side_index in range(sides):
-            a = ring * sides + side_index
-            b = ring * sides + (side_index + 1) % sides
-            c = (ring + 1) * sides + (side_index + 1) % sides
-            d = (ring + 1) * sides + side_index
-            faces.append((a, b, c, d))
-
-    mesh = bpy.data.meshes.new("root_sleeve_mesh")
-    mesh.from_pydata([tuple(v) for v in verts], [], faces)
-    mesh.update()
-    sleeve = bpy.data.objects.new("Short Dark Root Sleeve", mesh)
-    bpy.context.collection.objects.link(sleeve)
-    sleeve.data.materials.append(material)
-    bpy.context.view_layer.objects.active = sleeve
-    sleeve.select_set(True)
-    bpy.ops.object.shade_smooth()
-    sleeve.select_set(False)
-
-    bulb_location = root_point - direction * 0.022 + up * 0.002
-    bpy.ops.mesh.primitive_uv_sphere_add(
-        segments=24,
-        ring_count=12,
-        radius=geometry["rootBulbRadius"] * 0.66,
-        location=bulb_location,
-    )
-    bulb = bpy.context.object
-    bulb.name = "Small Root Adhesive Knot"
-    bulb.scale = (0.95, 0.58, 0.42)
-    bulb.rotation_euler[2] = math.radians(-18)
-    bulb.data.materials.append(material)
-    bpy.ops.object.shade_smooth()
-
+    return obj, root_start, p3
 
 def setup_scene(config):
     bpy.ops.object.select_all(action="SELECT")
@@ -196,19 +181,19 @@ def setup_scene(config):
     scene.render.resolution_y = config["render"]["heightPx"]
     scene.view_settings.view_transform = "Filmic"
     scene.view_settings.look = "Medium High Contrast"
-    scene.view_settings.exposure = -0.65
+    scene.view_settings.exposure = -0.72
 
-    bpy.ops.object.light_add(type="AREA", location=(-0.95, -1.35, 1.65))
+    bpy.ops.object.light_add(type="AREA", location=(-0.86, -1.2, 1.78))
     key = bpy.context.object
     key.name = "Long Soft Reflection"
-    key.data.energy = 80
-    key.data.size = 2.8
+    key.data.energy = 68
+    key.data.size = 2.2
 
-    bpy.ops.object.light_add(type="AREA", location=(0.7, -1.05, 0.62))
+    bpy.ops.object.light_add(type="AREA", location=(0.62, -0.78, 0.54))
     rim = bpy.context.object
     rim.name = "Thin Rim"
-    rim.data.energy = 12
-    rim.data.size = 0.55
+    rim.data.energy = 7
+    rim.data.size = 0.42
 
     bpy.ops.object.camera_add(location=(0.32, -0.32, 2.85))
     camera = bpy.context.object
@@ -220,20 +205,67 @@ def setup_scene(config):
     scene.camera = camera
 
 
+def aim_camera(target, ortho_scale):
+    camera = bpy.context.scene.camera
+    camera.location = Vector((target.x + 0.32, target.y - 0.32, target.z + 2.85))
+    direction = target - camera.location
+    camera.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+    camera.data.ortho_scale = ortho_scale
+
+
 def add_preview_background():
     material = bpy.data.materials.new("Calibration Warm Gray Background")
     material.diffuse_color = (0.82, 0.82, 0.78, 1)
     material.use_nodes = True
-    bsdf = material.node_tree.nodes.get("Principled BSDF")
-    if bsdf:
-        bsdf.inputs["Base Color"].default_value = (0.82, 0.82, 0.78, 1)
-        bsdf.inputs["Roughness"].default_value = 0.9
+    nodes = material.node_tree.nodes
+    nodes.clear()
+    output = nodes.new(type="ShaderNodeOutputMaterial")
+    bsdf = nodes.new(type="ShaderNodeBsdfPrincipled")
+    bsdf.inputs["Base Color"].default_value = (0.82, 0.82, 0.78, 1)
+    bsdf.inputs["Roughness"].default_value = 0.9
+    material.node_tree.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
 
     bpy.ops.mesh.primitive_plane_add(size=2.0, location=(0.055, 0.02, -0.09))
     plane = bpy.context.object
     plane.name = "Preview Contrast Background"
     plane.data.materials.append(material)
     return plane
+
+
+def projected_anchor(scene, point):
+    camera = scene.camera
+    projected = world_to_camera_view(scene, camera, point)
+    return {
+        "x": round(projected.x, 6),
+        "y": round(1 - projected.y, 6),
+        "pixelX": round(projected.x * scene.render.resolution_x, 2),
+        "pixelY": round((1 - projected.y) * scene.render.resolution_y, 2),
+    }
+
+
+def write_metadata(config, root, tip, output):
+    scene = bpy.context.scene
+    metadata = {
+        "fiberId": config["fiberId"],
+        "name": config["name"],
+        "assetType": "single-fiber",
+        "lengthMm": config["lengthMm"],
+        "thicknessMm": config["thicknessMm"],
+        "curl": config["curl"],
+        "color": config["color"],
+        "material": config["material"],
+        "geometry": config["geometry"],
+        "render": {
+            "widthPx": scene.render.resolution_x,
+            "heightPx": scene.render.resolution_y,
+            "rootAnchor": projected_anchor(scene, root),
+            "tipAnchor": projected_anchor(scene, tip),
+            "orientation": "root-to-tip"
+        }
+    }
+    metadata_path = output.with_name("metadata.json")
+    with open(metadata_path, "w", encoding="utf-8") as file:
+        json.dump(metadata, file, ensure_ascii=False, indent=2)
 
 
 def render(config):
@@ -243,13 +275,14 @@ def render(config):
         hex_to_rgba(config["color"]["base"]),
         config["material"]["roughness"],
         config["material"]["specular"],
+        config["material"].get("anisotropic", 0.4),
+        0.009,
     )
-    root_mat = make_material("Root Dark Adhesive", hex_to_rgba("#010101"), 0.78, 0.05)
-    _, root = make_fiber_mesh(config, fiber_mat)
-    add_root_sleeve(config, root_mat, root)
+    _, root, tip = make_fiber_mesh(config, fiber_mat)
 
     output = Path(config["render"]["output"])
     output.parent.mkdir(parents=True, exist_ok=True)
+    write_metadata(config, root, tip, output)
     bpy.context.scene.render.filepath = str(output)
     bpy.ops.render.render(write_still=True)
 
@@ -259,12 +292,26 @@ def render(config):
     bpy.context.scene.render.filepath = str(preview_output)
     bpy.ops.render.render(write_still=True)
 
+    aim_camera(root + Vector((0.015, 0.035, 0.0)), 0.28)
+    bpy.context.scene.render.filepath = str(output.with_name("root-detail.png"))
+    bpy.ops.render.render(write_still=True)
+
+    aim_camera(tip - Vector((0.02, 0.055, 0.0)), 0.24)
+    bpy.context.scene.render.filepath = str(output.with_name("tip-detail.png"))
+    bpy.ops.render.render(write_still=True)
+
 
 def main():
     args = parse_args()
-    with open(args.config, "r", encoding="utf-8") as file:
-        config = json.load(file)
-    render(config)
+    if args.config_dir:
+        config_paths = sorted(Path(args.config_dir).glob("*.json"))
+    else:
+        config_paths = [Path(args.config)]
+    for config_path in config_paths:
+        with open(config_path, "r", encoding="utf-8") as file:
+            config = json.load(file)
+        print(f"Rendering single fiber: {config_path}")
+        render(config)
 
 
 if __name__ == "__main__":
